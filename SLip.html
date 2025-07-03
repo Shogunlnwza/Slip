@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slip Generator - เครื่องมือสร้างสลิป</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- html2canvas library for generating images -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Base Styles & Fonts --- */
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* --- Dark Mode Styles --- */
+        body.dark {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        body.dark .card-bg {
+            background-color: #2d3748;
+        }
+        body.dark .text-header {
+            color: #e2e8f0;
+        }
+        body.dark .text-muted {
+            color: #a0aec0;
+        }
+        body.dark input {
+            background-color: #4a5568;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+        body.dark input::placeholder {
+            color: #a0aec0;
+        }
+        body.dark .modal-content-bg {
+             background-color: #2d3748;
+        }
+        body.dark .modal-header-text {
+            color: #e2e8f0;
+        }
+        body.dark .close-btn-bg {
+            background-color: #4a5568;
+            color: #e2e8f0;
+        }
+        body.dark .close-btn-bg:hover {
+            background-color: #718096;
+        }
+
+
+        /* --- Input Field Focus Glow --- */
+        input:focus {
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); /* blue-300 */
+            border-color: #60a5fa !important; /* blue-400 */
+        }
+
+        /* --- Button Animation --- */
+        .btn-animated {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-animated:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-animated:active {
+            transform: translateY(0px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* --- Modal Animation --- */
+        .modal.open { display: flex; }
+        .modal-content {
+            animation: zoomIn 0.3s ease-out;
+        }
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        /* --- Slip Template Styles --- */
+        #slipTemplate {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #ffffff !important;
+            color: #333 !important;
+        }
+        #slipTemplate * {
+            color: #333 !important;
+        }
+        .slip-footer {
+            border-top: 1px dashed #cbd5e1;
+        }
+        /* Zig-zag border effect for the slip */
+        .slip-border {
+            background: linear-gradient(-135deg, #ffffff 5px, transparent 0), linear-gradient(135deg, #ffffff 5px, transparent 0);
+            background-position: left-bottom;
+            background-repeat: repeat-x;
+            background-size: 10px 10px;
+            height: 10px;
+        }
+
+        /* --- Loading Spinner --- */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 1.25rem;
+            height: 1.25rem;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Main Container -->
+    <div class="container mx-auto min-h-screen flex flex-col items-center justify-center p-4">
+        
+        <!-- Form Card -->
+        <div class="card-bg w-full max-w-lg p-6 md:p-8 bg-white rounded-xl shadow-lg">
+            <!-- Header -->
+            <header class="text-center mb-8 relative">
+                <h1 class="text-3xl md:text-4xl font-bold text-header">Slip Generator</h1>
+                <p class="text-muted mt-2 text-md">สำหรับบันทึกการใช้เงินห้อง</p>
+                <!-- Dark Mode Toggle -->
+                <button id="darkModeToggle" class="absolute top-0 right-0 p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 btn-animated focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg id="sunIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 16a4 4 0 110-8 4 4 0 010 8z"></path></svg>
+                    <svg id="moonIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+            </header>
+
+            <!-- Form Section -->
+            <form id="slipForm" class="space-y-6">
+                <!-- Amount -->
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-muted mb-2">จำนวนเงิน (บาท)</label>
+                    <input type="number" id="amount" name="amount" step="0.01" required placeholder="เช่น 150.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                </div>
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block text-sm font-medium text-muted mb-2">รายการ</label>
+                    <input type="text" id="description" name="description" required placeholder="เช่น ค่าอุปกรณ์ทำบอร์ด" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                </div>
+                <!-- User Name -->
+                <div>
+                    <label for="user_name" class="block text-sm font-medium text-muted mb-2">ผู้เบิกเงิน</label>
+                    <input type="text" id="user_name" name="user_name" required placeholder="ชื่อ-นามสกุล ผู้เบิก" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                </div>
+                <!-- Date -->
+                <div>
+                    <label for="transaction_date" class="block text-sm font-medium text-muted mb-2">วันที่</label>
+                    <input type="date" id="transaction_date" name="transaction_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                </div>
+                <!-- Submit Button -->
+                <div class="pt-4">
+                    <button type="submit" id="generateButton" class="w-full flex items-center justify-center py-3 px-4 rounded-lg shadow-md text-md font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated">
+                        <span id="generateButtonText">สร้างสลิป</span>
+                        <div id="generateSpinner" class="spinner ml-3 hidden"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="text-center mt-8 mb-4 text-gray-500 dark:text-gray-400 text-sm">
+            <p>สร้างโดย Gemini</p>
+        </footer>
+    </div>
+
+    <!-- Slip Preview Modal -->
+    <div id="previewModal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+        <div class="modal-content modal-content-bg w-full max-w-sm transform transition-all bg-white rounded-lg shadow-xl">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-center modal-header-text mb-4">ตัวอย่างสลิป</h3>
+                <div id="slipOutput" class="mt-4 flex justify-center items-center">
+                    <!-- The generated slip image will be placed here -->
+                </div>
+                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3">
+                    <button id="downloadButton" class="w-full inline-flex justify-center rounded-md px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-base font-medium text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 btn-animated sm:text-sm">
+                        ดาวน์โหลด
+                    </button>
+                    <button id="closeModalButton" class="w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white close-btn-bg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated sm:mt-0 sm:text-sm">
+                        ปิด
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Slip Template (This is what gets converted to an image) -->
+    <div id="slipContainer" class="fixed -left-full top-0">
+        <div id="slipTemplate" class="p-6 bg-white" style="width: 350px;">
+            <div class="text-center pb-4">
+                <svg class="mx-auto h-12 w-auto text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <h2 class="text-xl font-bold mt-2">บันทึกการใช้เงินห้อง</h2>
+                <p id="templateDate" class="text-sm text-gray-500"></p>
+            </div>
+            
+            <div class="my-4 text-center">
+                <p class="text-4xl font-bold" id="templateAmount"></p>
+            </div>
+
+            <div class="border-t border-b border-dashed py-4 space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">รายการ:</span>
+                    <span class="font-semibold text-right" id="templateDescription"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">ผู้เบิกเงิน:</span>
+                    <span class="font-semibold text-right" id="templateUserName"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">รหัสอ้างอิง:</span>
+                    <span class="font-semibold" id="templateRef"></span>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <img id="templateQR" src="https://placehold.co/150x150/e2e8f0/e2e8f0?text=QR" alt="QR Code" class="mx-auto rounded-md">
+                <p class="text-xs text-gray-500 mt-2">สลิปนี้ใช้เป็นหลักฐานการเบิกเงิน</p>
+            </div>
+            <div class="slip-border mt-4"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM ELEMENTS ---
+            const slipForm = document.getElementById('slipForm');
+            const generateButton = document.getElementById('generateButton');
+            const generateButtonText = document.getElementById('generateButtonText');
+            const generateSpinner = document.getElementById('generateSpinner');
+            const previewModal = document.getElementById('previewModal');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const downloadButton = document.getElementById('downloadButton');
+            const slipOutput = document.getElementById('slipOutput');
+            const slipTemplate = document.getElementById('slipTemplate');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+
+            let generatedCanvas = null;
+
+            // --- DARK MODE LOGIC ---
+            const applyDarkMode = (isDark) => {
+                if (isDark) {
+                    document.body.classList.add('dark');
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                } else {
+                    document.body.classList.remove('dark');
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                }
+            };
+
+            darkModeToggle.addEventListener('click', () => {
+                const isDarkMode = document.body.classList.toggle('dark');
+                localStorage.setItem('darkMode', isDarkMode);
+                applyDarkMode(isDarkMode);
+            });
+
+            if (localStorage.getItem('darkMode') === 'true') {
+                applyDarkMode(true);
+            }
+
+            // --- FORM LOGIC ---
+            slipForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                setLoadingState(true);
+
+                const formData = new FormData(slipForm);
+                const data = Object.fromEntries(formData.entries());
+                
+                populateSlipTemplate(data);
+                
+                const qrImg = document.getElementById('templateQR');
+                qrImg.onload = () => { generateSlipImage(); };
+                qrImg.onerror = () => {
+                    console.error("QR Code image failed to load.");
+                    alert("ไม่สามารถโหลด QR Code ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+                    setLoadingState(false);
+                };
+            });
+
+            const populateSlipTemplate = (data) => {
+                const transactionDate = new Date(data.transaction_date);
+                // Adjust for timezone offset to prevent date from shifting
+                const userTimezoneOffset = transactionDate.getTimezoneOffset() * 60000;
+                const adjustedDate = new Date(transactionDate.getTime() + userTimezoneOffset);
+
+                const formattedDate = adjustedDate.toLocaleString('th-TH', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+
+                document.getElementById('templateDate').textContent = formattedDate;
+                document.getElementById('templateAmount').textContent = parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
+                document.getElementById('templateDescription').textContent = data.description;
+                document.getElementById('templateUserName').textContent = data.user_name;
+                
+                const refNumber = 'REF' + Date.now().toString().slice(-8);
+                document.getElementById('templateRef').textContent = refNumber;
+
+                const qrData = `Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
+                document.getElementById('templateQR').src = qrCodeUrl;
+            };
+
+            const generateSlipImage = () => {
+                html2canvas(slipTemplate, { 
+                    useCORS: true,
+                    scale: 2.5,
+                    backgroundColor: '#ffffff',
+                }).then(canvas => {
+                    generatedCanvas = canvas;
+                    slipOutput.innerHTML = '';
+                    canvas.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md');
+                    slipOutput.appendChild(canvas);
+                    
+                    showModal();
+                    setLoadingState(false);
+                }).catch(err => {
+                    console.error("Error generating canvas:", err);
+                    setLoadingState(false);
+                });
+            };
+
+            // --- MODAL CONTROLS ---
+            const showModal = () => {
+                previewModal.classList.remove('hidden');
+                previewModal.classList.add('open');
+            };
+
+            const hideModal = () => {
+                previewModal.classList.add('hidden');
+                previewModal.classList.remove('open');
+            };
+
+            closeModalButton.addEventListener('click', hideModal);
+            previewModal.addEventListener('click', (e) => {
+                if (e.target === previewModal) {
+                    hideModal();
+                }
+            });
+
+            downloadButton.addEventListener('click', () => {
+                if (!generatedCanvas) return;
+                const link = document.createElement('a');
+                link.download = `slip-${Date.now()}.png`;
+                link.href = generatedCanvas.toDataURL('image/png');
+                link.click();
+            });
+
+            // --- UTILITY FUNCTIONS ---
+            const setLoadingState = (isLoading) => {
+                generateButton.disabled = isLoading;
+                if (isLoading) {
+                    generateButtonText.textContent = 'กำลังสร้าง...';
+                    generateSpinner.classList.remove('hidden');
+                } else {
+                    generateButtonText.textContent = 'สร้างสลิป';
+                    generateSpinner.classList.add('hidden');
+                }
+            };
+
+            const setInitialDate = () => {
+                const now = new Date();
+                document.getElementById('transaction_date').value = now.toISOString().slice(0, 10);
+            };
+
+            // --- INITIALIZATION ---
+            setInitialDate();
+        });
+    </script>
+</body>
+</html>

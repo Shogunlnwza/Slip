@@ -39,7 +39,7 @@
         body.dark .text-muted {
             color: #a0aec0;
         }
-        body.dark input {
+        body.dark input, body.dark .toggle-btn-inactive {
             background-color: #4a5568;
             color: #e2e8f0;
             border-color: #4a5568;
@@ -59,6 +59,9 @@
         }
         body.dark .close-btn-bg:hover {
             background-color: #718096;
+        }
+        body.dark .toggle-btn-inactive {
+            color: #a0aec0;
         }
 
 
@@ -100,16 +103,8 @@
         #slipTemplate * {
             color: #333 !important;
         }
-        .slip-footer {
-            border-top: 1px dashed #cbd5e1;
-        }
-        /* Zig-zag border effect for the slip */
-        .slip-border {
-            background: linear-gradient(-135deg, #ffffff 5px, transparent 0), linear-gradient(135deg, #ffffff 5px, transparent 0);
-            background-position: left-bottom;
-            background-repeat: repeat-x;
-            background-size: 10px 10px;
-            height: 10px;
+        #slipTemplate .text-red-600 {
+            color: #dc2626 !important;
         }
 
         /* --- Loading Spinner --- */
@@ -134,7 +129,7 @@
         <!-- Form Card -->
         <div class="card-bg w-full max-w-lg p-6 md:p-8 bg-white rounded-xl shadow-lg">
             <!-- Header -->
-            <header class="text-center mb-8 relative">
+            <header class="text-center mb-6 relative">
                 <h1 class="text-3xl md:text-4xl font-bold text-header">Slip Generator</h1>
                 <p class="text-muted mt-2 text-md">สำหรับบันทึกการใช้เงินห้อง</p>
                 <!-- Dark Mode Toggle -->
@@ -146,6 +141,15 @@
 
             <!-- Form Section -->
             <form id="slipForm" class="space-y-6">
+                <!-- Transaction Type Toggle -->
+                <div>
+                    <label class="block text-sm font-medium text-muted mb-2">ประเภทรายการ</label>
+                    <div class="grid grid-cols-2 gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-700">
+                        <button type="button" id="useFundsButton" class="toggle-btn-active w-full py-2 text-sm font-semibold rounded-md shadow-sm">ใช้เงินห้อง</button>
+                        <button type="button" id="borrowFundsButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">ยืมเงินห้อง</button>
+                    </div>
+                </div>
+
                 <!-- Amount -->
                 <div>
                     <label for="amount" class="block text-sm font-medium text-muted mb-2">จำนวนเงิน (บาท)</label>
@@ -158,14 +162,27 @@
                 </div>
                 <!-- User Name -->
                 <div>
-                    <label for="user_name" class="block text-sm font-medium text-muted mb-2">ผู้เบิกเงิน</label>
-                    <input type="text" id="user_name" name="user_name" required placeholder="ชื่อ-นามสกุล ผู้เบิก" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                    <label for="user_name" class="block text-sm font-medium text-muted mb-2">ผู้ทำรายการ</label>
+                    <input type="text" id="user_name" name="user_name" required placeholder="ชื่อ-นามสกุล" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                 </div>
                 <!-- Date -->
                 <div>
-                    <label for="transaction_date" class="block text-sm font-medium text-muted mb-2">วันที่</label>
+                    <label for="transaction_date" class="block text-sm font-medium text-muted mb-2">วันที่ทำรายการ</label>
                     <input type="date" id="transaction_date" name="transaction_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                 </div>
+
+                <!-- Borrow Info Section (Hidden by default) -->
+                <div id="borrowInfoSection" class="hidden space-y-4 pt-2">
+                    <hr class="border-gray-300 dark:border-gray-600">
+                    <div>
+                        <label for="return_date" class="block text-sm font-medium text-muted mb-2">กำหนดวันคืนเงิน</label>
+                        <input type="date" id="return_date" name="return_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                    </div>
+                    <div class="text-center text-xs text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        คิดดอกเบี้ยวันละ 2 บาทจากวันที่กำหนด (รวมเสาร์-อาทิตย์)
+                    </div>
+                </div>
+
                 <!-- Submit Button -->
                 <div class="pt-4">
                     <button type="submit" id="generateButton" class="w-full flex items-center justify-center py-3 px-4 rounded-lg shadow-md text-md font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated">
@@ -207,7 +224,7 @@
         <div id="slipTemplate" class="p-6 bg-white" style="width: 350px;">
             <div class="text-center pb-4">
                 <svg class="mx-auto h-12 w-auto text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <h2 class="text-xl font-bold mt-2">บันทึกการใช้เงินห้อง</h2>
+                <h2 id="templateTitle" class="text-xl font-bold mt-2"></h2>
                 <p id="templateDate" class="text-sm text-gray-500"></p>
             </div>
             
@@ -221,7 +238,7 @@
                     <span class="font-semibold text-right" id="templateDescription"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span class="text-gray-600">ผู้เบิกเงิน:</span>
+                    <span id="templateUserLabel" class="text-gray-600">ผู้เบิกเงิน:</span>
                     <span class="font-semibold text-right" id="templateUserName"></span>
                 </div>
                 <div class="flex justify-between">
@@ -229,12 +246,23 @@
                     <span class="font-semibold" id="templateRef"></span>
                 </div>
             </div>
+            
+            <!-- Borrow Info on Slip -->
+            <div id="templateBorrowSection" class="hidden border-b border-dashed pb-4 pt-3 space-y-2 text-sm">
+                 <div class="flex justify-between">
+                    <span class="text-gray-600">กำหนดคืนวันที่:</span>
+                    <span class="font-semibold text-right" id="templateReturnDate"></span>
+                </div>
+                <div class="text-center text-xs text-red-600 font-medium pt-1">
+                    <p>คิดดอกเบี้ยวันละ 2 บาทจากวันที่กำหนด (รวม ส-อา)</p>
+                </div>
+            </div>
+
 
             <div class="mt-6 text-center">
                 <img id="templateQR" src="https://placehold.co/150x150/e2e8f0/e2e8f0?text=QR" alt="QR Code" class="mx-auto rounded-md">
-                <p class="text-xs text-gray-500 mt-2">สลิปนี้ใช้เป็นหลักฐานการเบิกเงิน</p>
+                <p class="text-xs text-gray-500 mt-2">สลิปนี้ใช้เป็นหลักฐานการทำรายการ</p>
             </div>
-            <div class="slip-border mt-4"></div>
         </div>
     </div>
 
@@ -253,8 +281,26 @@
             const darkModeToggle = document.getElementById('darkModeToggle');
             const sunIcon = document.getElementById('sunIcon');
             const moonIcon = document.getElementById('moonIcon');
+            
+            // New elements for transaction type
+            const useFundsButton = document.getElementById('useFundsButton');
+            const borrowFundsButton = document.getElementById('borrowFundsButton');
+            const borrowInfoSection = document.getElementById('borrowInfoSection');
+            const returnDateInput = document.getElementById('return_date');
+            const userNameLabel = document.querySelector('label[for="user_name"]');
+            
+            // Template elements
+            const templateTitle = document.getElementById('templateTitle');
+            const templateUserLabel = document.getElementById('templateUserLabel');
+            const templateBorrowSection = document.getElementById('templateBorrowSection');
+
 
             let generatedCanvas = null;
+            let transactionType = 'use'; // 'use' or 'borrow'
+
+            // --- STYLING CLASSES ---
+            const activeBtnClasses = ['toggle-btn-active', 'bg-white', 'dark:bg-indigo-500', 'text-indigo-700', 'dark:text-white'];
+            const inactiveBtnClasses = ['toggle-btn-inactive', 'text-gray-500', 'dark:text-gray-300'];
 
             // --- DARK MODE LOGIC ---
             const applyDarkMode = (isDark) => {
@@ -267,6 +313,7 @@
                     sunIcon.classList.remove('hidden');
                     moonIcon.classList.add('hidden');
                 }
+                updateToggleButtonsUI();
             };
 
             darkModeToggle.addEventListener('click', () => {
@@ -275,9 +322,37 @@
                 applyDarkMode(isDarkMode);
             });
 
-            if (localStorage.getItem('darkMode') === 'true') {
-                applyDarkMode(true);
-            }
+            // --- TRANSACTION TYPE TOGGLE LOGIC ---
+            const updateToggleButtonsUI = () => {
+                if (transactionType === 'use') {
+                    useFundsButton.classList.remove(...inactiveBtnClasses);
+                    useFundsButton.classList.add(...activeBtnClasses);
+                    borrowFundsButton.classList.remove(...activeBtnClasses);
+                    borrowFundsButton.classList.add(...inactiveBtnClasses);
+                } else {
+                    borrowFundsButton.classList.remove(...inactiveBtnClasses);
+                    borrowFundsButton.classList.add(...activeBtnClasses);
+                    useFundsButton.classList.remove(...activeBtnClasses);
+                    useFundsButton.classList.add(...inactiveBtnClasses);
+                }
+            };
+            
+            const setTransactionType = (type) => {
+                transactionType = type;
+                if (type === 'use') {
+                    borrowInfoSection.classList.add('hidden');
+                    returnDateInput.required = false;
+                    userNameLabel.textContent = 'ผู้เบิกเงิน';
+                } else {
+                    borrowInfoSection.classList.remove('hidden');
+                    returnDateInput.required = true;
+                    userNameLabel.textContent = 'ผู้ยืมเงิน';
+                }
+                updateToggleButtonsUI();
+            };
+
+            useFundsButton.addEventListener('click', () => setTransactionType('use'));
+            borrowFundsButton.addEventListener('click', () => setTransactionType('borrow'));
 
             // --- FORM LOGIC ---
             slipForm.addEventListener('submit', (e) => {
@@ -289,24 +364,29 @@
                 
                 populateSlipTemplate(data);
                 
+                // Wait for QR code image to load before generating canvas
                 const qrImg = document.getElementById('templateQR');
-                qrImg.onload = () => { generateSlipImage(); };
-                qrImg.onerror = () => {
-                    console.error("QR Code image failed to load.");
-                    alert("ไม่สามารถโหลด QR Code ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
-                    setLoadingState(false);
-                };
+                if (qrImg.complete) {
+                    generateSlipImage();
+                } else {
+                    qrImg.onload = () => { generateSlipImage(); };
+                    qrImg.onerror = () => {
+                        console.error("QR Code image failed to load.");
+                        // Simple fallback message, as alert() is not ideal
+                        slipOutput.innerHTML = `<p class="text-red-500">ไม่สามารถโหลด QR Code ได้</p>`;
+                        setLoadingState(false);
+                    };
+                }
             });
 
             const populateSlipTemplate = (data) => {
+                // Format transaction date
                 const transactionDate = new Date(data.transaction_date);
-                // Adjust for timezone offset to prevent date from shifting
                 const userTimezoneOffset = transactionDate.getTimezoneOffset() * 60000;
                 const adjustedDate = new Date(transactionDate.getTime() + userTimezoneOffset);
-
                 const formattedDate = adjustedDate.toLocaleString('th-TH', {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                });
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) + ' น.';
 
                 document.getElementById('templateDate').textContent = formattedDate;
                 document.getElementById('templateAmount').textContent = parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
@@ -315,20 +395,42 @@
                 
                 const refNumber = 'REF' + Date.now().toString().slice(-8);
                 document.getElementById('templateRef').textContent = refNumber;
+                
+                // Update based on transaction type
+                if (transactionType === 'borrow') {
+                    templateTitle.textContent = 'บันทึกการยืมเงินห้อง';
+                    templateUserLabel.textContent = 'ผู้ยืมเงิน:';
+                    
+                    // Format and display return date
+                    const returnDate = new Date(data.return_date);
+                    const adjustedReturnDate = new Date(returnDate.getTime() + userTimezoneOffset);
+                    const formattedReturnDate = adjustedReturnDate.toLocaleString('th-TH', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    });
+                    document.getElementById('templateReturnDate').textContent = formattedReturnDate;
+                    templateBorrowSection.classList.remove('hidden');
 
-                const qrData = `Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
+                } else {
+                    templateTitle.textContent = 'บันทึกการใช้เงินห้อง';
+                    templateUserLabel.textContent = 'ผู้เบิกเงิน:';
+                    templateBorrowSection.classList.add('hidden');
+                }
+
+                // Generate QR Code
+                const qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
                 const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
                 document.getElementById('templateQR').src = qrCodeUrl;
             };
 
             const generateSlipImage = () => {
+                // Ensure all images are loaded before rendering
                 html2canvas(slipTemplate, { 
                     useCORS: true,
-                    scale: 2.5,
+                    scale: 2.5, // Higher scale for better quality
                     backgroundColor: '#ffffff',
                 }).then(canvas => {
                     generatedCanvas = canvas;
-                    slipOutput.innerHTML = '';
+                    slipOutput.innerHTML = ''; // Clear previous content
                     canvas.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md');
                     slipOutput.appendChild(canvas);
                     
@@ -361,7 +463,8 @@
             downloadButton.addEventListener('click', () => {
                 if (!generatedCanvas) return;
                 const link = document.createElement('a');
-                link.download = `slip-${Date.now()}.png`;
+                const fileName = transactionType === 'borrow' ? 'slip-borrow' : 'slip-use';
+                link.download = `${fileName}-${Date.now()}.png`;
                 link.href = generatedCanvas.toDataURL('image/png');
                 link.click();
             });
@@ -380,11 +483,21 @@
 
             const setInitialDate = () => {
                 const now = new Date();
-                document.getElementById('transaction_date').value = now.toISOString().slice(0, 10);
+                const today = now.toISOString().slice(0, 10);
+                document.getElementById('transaction_date').value = today;
+                // Set default return date to 7 days from now
+                now.setDate(now.getDate() + 7);
+                document.getElementById('return_date').value = now.toISOString().slice(0, 10);
             };
 
             // --- INITIALIZATION ---
             setInitialDate();
+            if (localStorage.getItem('darkMode') === 'true') {
+                applyDarkMode(true);
+            } else {
+                // Still need to apply styles for light mode on init
+                updateToggleButtonsUI();
+            }
         });
     </script>
 </body>

@@ -39,10 +39,13 @@
         body.dark .text-muted {
             color: #a0aec0;
         }
-        body.dark input, body.dark .toggle-btn-inactive {
+        body.dark input, body.dark select, body.dark .toggle-btn-inactive {
             background-color: #4a5568;
             color: #e2e8f0;
             border-color: #4a5568;
+        }
+        body.dark input[type="checkbox"] {
+            background-color: #4a5568; /* Checkbox background in dark mode */
         }
         body.dark input::placeholder {
             color: #a0aec0;
@@ -66,7 +69,7 @@
 
 
         /* --- Input Field Focus Glow --- */
-        input:focus {
+        input:focus, select:focus {
             box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); /* blue-300 */
             border-color: #60a5fa !important; /* blue-400 */
         }
@@ -178,8 +181,19 @@
                         <label for="return_date" class="block text-sm font-medium text-muted mb-2">กำหนดวันคืนเงิน</label>
                         <input type="date" id="return_date" name="return_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                     </div>
-                    <div class="text-center text-xs text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                        คิดดอกเบี้ยวันละ 2 บาทจากวันที่กำหนด (รวมเสาร์-อาทิตย์)
+                    <div>
+                        <label for="interest_rate" class="block text-sm font-medium text-muted mb-2">ดอกเบี้ยต่อวัน (บาท)</label>
+                        <input type="number" id="interest_rate" name="interest_rate" value="2" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                    </div>
+                    <!-- UPDATED: Replaced checkboxes with a dropdown -->
+                    <div>
+                        <label for="interest_condition" class="block text-sm font-medium text-muted mb-2">เงื่อนไขดอกเบี้ย</label>
+                        <select id="interest_condition" name="interest_condition" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                            <option value="all" selected>รวมเสาร์-อาทิตย์</option>
+                            <option value="weekdays">ไม่รวมเสาร์-อาทิตย์</option>
+                            <option value="saturday_only">รวมเฉพาะวันเสาร์</option>
+                            <option value="sunday_only">รวมเฉพาะวันอาทิตย์</option>
+                        </select>
                     </div>
                 </div>
 
@@ -202,20 +216,27 @@
 
     <!-- Slip Preview Modal -->
     <div id="previewModal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-        <div class="modal-content modal-content-bg w-full max-w-sm transform transition-all bg-white rounded-lg shadow-xl">
-            <div class="p-6">
-                <h3 class="text-lg font-medium text-center modal-header-text mb-4">ตัวอย่างสลิป</h3>
-                <div id="slipOutput" class="mt-4 flex justify-center items-center">
+        <div class="modal-content modal-content-bg w-full max-w-sm bg-white rounded-lg shadow-xl flex flex-col" style="max-height: 90vh;">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h3 class="text-lg font-medium text-center modal-header-text">ตัวอย่างสลิป</h3>
+            </div>
+            
+            <!-- Scrollable Content Area -->
+            <div class="p-6 overflow-y-auto">
+                <div id="slipOutput" class="flex justify-center items-start">
                     <!-- The generated slip image will be placed here -->
                 </div>
-                <div class="mt-6 flex flex-col sm:flex-row-reverse gap-3">
-                    <button id="downloadButton" class="w-full inline-flex justify-center rounded-md px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-base font-medium text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 btn-animated sm:text-sm">
-                        ดาวน์โหลด
-                    </button>
-                    <button id="closeModalButton" class="w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white close-btn-bg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated sm:mt-0 sm:text-sm">
-                        ปิด
-                    </button>
-                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row-reverse gap-3 flex-shrink-0">
+                <button id="downloadButton" class="w-full inline-flex justify-center rounded-md px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-base font-medium text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 btn-animated sm:text-sm">
+                    ดาวน์โหลด
+                </button>
+                <button id="closeModalButton" class="w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white close-btn-bg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated sm:mt-0 sm:text-sm">
+                    ปิด
+                </button>
             </div>
         </div>
     </div>
@@ -255,7 +276,7 @@
                     <span class="font-semibold text-right" id="templateReturnDate"></span>
                 </div>
                 <div class="text-center text-xs text-red-600 font-medium pt-1">
-                    <p>คิดดอกเบี้ยวันละ 2 บาทจากวันที่กำหนด (รวม ส-อา)</p>
+                    <p id="templateInterestInfo"></p>
                 </div>
             </div>
 
@@ -283,18 +304,19 @@
             const sunIcon = document.getElementById('sunIcon');
             const moonIcon = document.getElementById('moonIcon');
             
-            // New elements for transaction type
+            // Transaction type elements
             const useFundsButton = document.getElementById('useFundsButton');
             const borrowFundsButton = document.getElementById('borrowFundsButton');
             const borrowInfoSection = document.getElementById('borrowInfoSection');
             const returnDateInput = document.getElementById('return_date');
             const userNameLabel = document.querySelector('label[for="user_name"]');
             
+            const interestRateInput = document.getElementById('interest_rate');
+
             // Template elements
             const templateTitle = document.getElementById('templateTitle');
             const templateUserLabel = document.getElementById('templateUserLabel');
             const templateBorrowSection = document.getElementById('templateBorrowSection');
-
 
             let generatedCanvas = null;
             let transactionType = 'use'; // 'use' or 'borrow'
@@ -343,10 +365,12 @@
                 if (type === 'use') {
                     borrowInfoSection.classList.add('hidden');
                     returnDateInput.required = false;
+                    interestRateInput.required = false;
                     userNameLabel.textContent = 'ผู้เบิกเงิน';
                 } else {
                     borrowInfoSection.classList.remove('hidden');
                     returnDateInput.required = true;
+                    interestRateInput.required = true;
                     userNameLabel.textContent = 'ผู้ยืมเงิน';
                 }
                 updateToggleButtonsUI();
@@ -373,7 +397,6 @@
                     qrImg.onload = () => { generateSlipImage(); };
                     qrImg.onerror = () => {
                         console.error("QR Code image failed to load.");
-                        // Simple fallback message, as alert() is not ideal
                         slipOutput.innerHTML = `<p class="text-red-500">ไม่สามารถโหลด QR Code ได้</p>`;
                         setLoadingState(false);
                     };
@@ -397,6 +420,8 @@
                 const refNumber = 'REF' + Date.now().toString().slice(-8);
                 document.getElementById('templateRef').textContent = refNumber;
                 
+                let qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
+                
                 // Update based on transaction type
                 if (transactionType === 'borrow') {
                     templateTitle.textContent = 'บันทึกการยืมเงินห้อง';
@@ -409,6 +434,32 @@
                         year: 'numeric', month: 'long', day: 'numeric'
                     });
                     document.getElementById('templateReturnDate').textContent = formattedReturnDate;
+                    
+                    // UPDATED: Handle new interest dropdown
+                    const interestRate = data.interest_rate || 0;
+                    const interestCondition = data.interest_condition;
+
+                    let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(interestRate).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
+
+                    switch (interestCondition) {
+                        case 'all':
+                            interestText += ' (รวม ส-อา)';
+                            break;
+                        case 'weekdays':
+                            interestText += ' (ไม่รวม ส-อา)';
+                            break;
+                        case 'saturday_only':
+                            interestText += ' (รวมเฉพาะวันเสาร์)';
+                            break;
+                        case 'sunday_only':
+                            interestText += ' (รวมเฉพาะวันอาทิตย์)';
+                            break;
+                    }
+                    document.getElementById('templateInterestInfo').textContent = interestText;
+                    
+                    // Add interest data to QR code
+                    qrData += `, InterestRate: ${interestRate}, Condition: ${interestCondition}`;
+
                     templateBorrowSection.classList.remove('hidden');
 
                 } else {
@@ -418,7 +469,6 @@
                 }
 
                 // Generate QR Code
-                const qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
                 const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
                 document.getElementById('templateQR').src = qrCodeUrl;
             };
@@ -427,7 +477,7 @@
                 // Ensure all images are loaded before rendering
                 html2canvas(slipTemplate, { 
                     useCORS: true,
-                    scale: 2.5, // Higher scale for better quality
+                    scale: 2.0,
                     backgroundColor: '#ffffff',
                 }).then(canvas => {
                     generatedCanvas = canvas;

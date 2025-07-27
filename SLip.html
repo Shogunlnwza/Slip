@@ -45,7 +45,7 @@
             border-color: #4a5568;
         }
         body.dark input[type="checkbox"] {
-            background-color: #4a5568; /* Checkbox background in dark mode */
+            background-color: #4a5568;
         }
         body.dark input::placeholder {
             color: #a0aec0;
@@ -65,6 +65,10 @@
         }
         body.dark .toggle-btn-inactive {
             color: #a0aec0;
+        }
+        body.dark .toggle-btn-active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: #ffffff;
         }
 
 
@@ -109,6 +113,14 @@
         #slipTemplate .text-red-600 {
             color: #dc2626 !important;
         }
+        #slipTemplate .text-green-600 {
+            color: #16a34a !important;
+        }
+
+        /* --- Class to hide element but preserve space --- */
+        .invisible-space {
+            visibility: hidden;
+        }
 
         /* --- Loading Spinner --- */
         .spinner {
@@ -147,7 +159,8 @@
                 <!-- Transaction Type Toggle -->
                 <div>
                     <label class="block text-sm font-medium text-muted mb-2">ประเภทรายการ</label>
-                    <div class="grid grid-cols-2 gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-700">
+                    <div class="grid grid-cols-3 gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-700">
+                        <button type="button" id="incomeButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">รายรับ</button>
                         <button type="button" id="useFundsButton" class="toggle-btn-active w-full py-2 text-sm font-semibold rounded-md shadow-sm">ใช้เงินห้อง</button>
                         <button type="button" id="borrowFundsButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">ยืมเงินห้อง</button>
                     </div>
@@ -185,7 +198,6 @@
                         <label for="interest_rate" class="block text-sm font-medium text-muted mb-2">ดอกเบี้ยต่อวัน (บาท)</label>
                         <input type="number" id="interest_rate" name="interest_rate" value="2" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                     </div>
-                    <!-- UPDATED: Replaced checkboxes with a dropdown -->
                     <div>
                         <label for="interest_condition" class="block text-sm font-medium text-muted mb-2">เงื่อนไขดอกเบี้ย</label>
                         <select id="interest_condition" name="interest_condition" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
@@ -196,6 +208,20 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- Slip Options -->
+                <div class="pt-2 space-y-3">
+                    <hr class="border-gray-300 dark:border-gray-600">
+                    <label for="showRefCode" class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="showRefCode" name="showRefCode" class="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked>
+                        <span class="text-muted">แสดงรหัสอ้างอิง</span>
+                    </label>
+                    <label for="showQRCode" class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="showQRCode" name="showQRCode" class="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked>
+                        <span class="text-muted">แสดง QR Code</span>
+                    </label>
+                </div>
+
 
                 <!-- Submit Button -->
                 <div class="pt-4">
@@ -245,7 +271,7 @@
     <div id="slipContainer" class="fixed -left-full top-0">
         <div id="slipTemplate" class="p-6 bg-white" style="width: 350px;">
             <div class="text-center pb-4">
-                <svg class="mx-auto h-12 w-auto text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 <svg id="templateIcon" class="mx-auto h-12 w-auto text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <h2 id="templateTitle" class="text-xl font-bold mt-2"></h2>
                 <p id="templateDate" class="text-sm text-gray-500"></p>
             </div>
@@ -260,10 +286,10 @@
                     <span class="font-semibold text-right" id="templateDescription"></span>
                 </div>
                 <div class="flex justify-between">
-                    <span id="templateUserLabel" class="text-gray-600">ผู้เบิกเงิน:</span>
+                    <span id="templateUserLabel" class="text-gray-600">ผู้ทำรายการ:</span>
                     <span class="font-semibold text-right" id="templateUserName"></span>
                 </div>
-                <div class="flex justify-between">
+                <div id="templateRefRow" class="flex justify-between">
                     <span class="text-gray-600">รหัสอ้างอิง:</span>
                     <span class="font-semibold" id="templateRef"></span>
                 </div>
@@ -281,7 +307,7 @@
             </div>
 
 
-            <div class="mt-6 text-center">
+            <div id="templateQRSection" class="mt-6 text-center">
                 <img id="templateQR" src="https://placehold.co/150x150/e2e8f0/e2e8f0?text=QR" alt="QR Code" class="mx-auto rounded-md">
                 <p class="text-xs text-gray-500 mt-2">สลิปนี้ใช้เป็นหลักฐานการทำรายการ</p>
             </div>
@@ -305,6 +331,7 @@
             const moonIcon = document.getElementById('moonIcon');
             
             // Transaction type elements
+            const incomeButton = document.getElementById('incomeButton');
             const useFundsButton = document.getElementById('useFundsButton');
             const borrowFundsButton = document.getElementById('borrowFundsButton');
             const borrowInfoSection = document.getElementById('borrowInfoSection');
@@ -317,13 +344,15 @@
             const templateTitle = document.getElementById('templateTitle');
             const templateUserLabel = document.getElementById('templateUserLabel');
             const templateBorrowSection = document.getElementById('templateBorrowSection');
+            const templateIcon = document.getElementById('templateIcon');
+            const templateAmount = document.getElementById('templateAmount');
 
             let generatedCanvas = null;
-            let transactionType = 'use'; // 'use' or 'borrow'
+            let transactionType = 'use'; // 'use', 'borrow', or 'income'
 
             // --- STYLING CLASSES ---
-            const activeBtnClasses = ['toggle-btn-active', 'bg-white', 'dark:bg-indigo-500', 'text-indigo-700', 'dark:text-white'];
-            const inactiveBtnClasses = ['toggle-btn-inactive', 'text-gray-500', 'dark:text-gray-300'];
+            const activeBtnClasses = ['toggle-btn-active', 'bg-white', 'dark:bg-indigo-600', 'text-indigo-700', 'dark:text-white', 'shadow-sm'];
+            const inactiveBtnClasses = ['toggle-btn-inactive', 'text-gray-500', 'dark:text-gray-400'];
 
             // --- DARK MODE LOGIC ---
             const applyDarkMode = (isDark) => {
@@ -347,27 +376,34 @@
 
             // --- TRANSACTION TYPE TOGGLE LOGIC ---
             const updateToggleButtonsUI = () => {
-                if (transactionType === 'use') {
-                    useFundsButton.classList.remove(...inactiveBtnClasses);
-                    useFundsButton.classList.add(...activeBtnClasses);
-                    borrowFundsButton.classList.remove(...activeBtnClasses);
-                    borrowFundsButton.classList.add(...inactiveBtnClasses);
-                } else {
-                    borrowFundsButton.classList.remove(...inactiveBtnClasses);
-                    borrowFundsButton.classList.add(...activeBtnClasses);
-                    useFundsButton.classList.remove(...activeBtnClasses);
-                    useFundsButton.classList.add(...inactiveBtnClasses);
+                const buttons = {
+                    income: incomeButton,
+                    use: useFundsButton,
+                    borrow: borrowFundsButton
+                };
+
+                for (const key in buttons) {
+                    buttons[key].classList.remove(...activeBtnClasses);
+                    buttons[key].classList.add(...inactiveBtnClasses);
+                }
+
+                if (buttons[transactionType]) {
+                    buttons[transactionType].classList.remove(...inactiveBtnClasses);
+                    buttons[transactionType].classList.add(...activeBtnClasses);
                 }
             };
             
             const setTransactionType = (type) => {
                 transactionType = type;
-                if (type === 'use') {
-                    borrowInfoSection.classList.add('hidden');
-                    returnDateInput.required = false;
-                    interestRateInput.required = false;
+                borrowInfoSection.classList.add('hidden');
+                returnDateInput.required = false;
+                interestRateInput.required = false;
+                
+                if (type === 'income') {
+                    userNameLabel.textContent = 'ผู้รับเงิน';
+                } else if (type === 'use') {
                     userNameLabel.textContent = 'ผู้เบิกเงิน';
-                } else {
+                } else if (type === 'borrow') {
                     borrowInfoSection.classList.remove('hidden');
                     returnDateInput.required = true;
                     interestRateInput.required = true;
@@ -375,7 +411,8 @@
                 }
                 updateToggleButtonsUI();
             };
-
+            
+            incomeButton.addEventListener('click', () => setTransactionType('income'));
             useFundsButton.addEventListener('click', () => setTransactionType('use'));
             borrowFundsButton.addEventListener('click', () => setTransactionType('borrow'));
 
@@ -389,7 +426,6 @@
                 
                 populateSlipTemplate(data);
                 
-                // Wait for QR code image to load before generating canvas
                 const qrImg = document.getElementById('templateQR');
                 if (qrImg.complete) {
                     generateSlipImage();
@@ -404,16 +440,27 @@
             });
 
             const populateSlipTemplate = (data) => {
-                // Format transaction date
+                // Get checkbox states
+                const showRef = document.getElementById('showRefCode').checked;
+                const showQR = document.getElementById('showQRCode').checked;
+
+                // Get elements to toggle
+                const refRow = document.getElementById('templateRefRow');
+                const qrSection = document.getElementById('templateQRSection');
+
+                // Toggle visibility based on checkboxes, preserving space
+                refRow.classList.toggle('invisible-space', !showRef);
+                qrSection.classList.toggle('invisible-space', !showQR);
+
+                // Format transaction date (without time)
                 const transactionDate = new Date(data.transaction_date);
                 const userTimezoneOffset = transactionDate.getTimezoneOffset() * 60000;
                 const adjustedDate = new Date(transactionDate.getTime() + userTimezoneOffset);
                 const formattedDate = adjustedDate.toLocaleString('th-TH', {
-                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                }) + ' น.';
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
 
                 document.getElementById('templateDate').textContent = formattedDate;
-                document.getElementById('templateAmount').textContent = parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
                 document.getElementById('templateDescription').textContent = data.description;
                 document.getElementById('templateUserName').textContent = data.user_name;
                 
@@ -422,12 +469,24 @@
                 
                 let qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
                 
-                // Update based on transaction type
-                if (transactionType === 'borrow') {
+                templateIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+                templateIcon.classList.remove('text-red-500');
+                templateIcon.classList.add('text-green-500');
+                templateAmount.classList.remove('text-red-600');
+                templateAmount.classList.add('text-green-600');
+                templateAmount.textContent = '+ ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
+
+                if (transactionType === 'income') {
+                    templateTitle.textContent = 'บันทึกรายรับเข้าห้อง';
+                    templateUserLabel.textContent = 'ผู้รับเงิน:';
+                    templateBorrowSection.classList.add('hidden');
+                } else if (transactionType === 'borrow') {
                     templateTitle.textContent = 'บันทึกการยืมเงินห้อง';
                     templateUserLabel.textContent = 'ผู้ยืมเงิน:';
+                    templateAmount.classList.remove('text-green-600');
+                    templateAmount.classList.add('text-red-600');
+                    templateAmount.textContent = '- ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
                     
-                    // Format and display return date
                     const returnDate = new Date(data.return_date);
                     const adjustedReturnDate = new Date(returnDate.getTime() + userTimezoneOffset);
                     const formattedReturnDate = adjustedReturnDate.toLocaleString('th-TH', {
@@ -435,53 +494,45 @@
                     });
                     document.getElementById('templateReturnDate').textContent = formattedReturnDate;
                     
-                    // UPDATED: Handle new interest dropdown
                     const interestRate = data.interest_rate || 0;
                     const interestCondition = data.interest_condition;
 
                     let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(interestRate).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
 
                     switch (interestCondition) {
-                        case 'all':
-                            interestText += ' (รวม ส-อา)';
-                            break;
-                        case 'weekdays':
-                            interestText += ' (ไม่รวม ส-อา)';
-                            break;
-                        case 'saturday_only':
-                            interestText += ' (รวมเฉพาะวันเสาร์)';
-                            break;
-                        case 'sunday_only':
-                            interestText += ' (รวมเฉพาะวันอาทิตย์)';
-                            break;
+                        case 'all': interestText += ' (รวม ส-อา)'; break;
+                        case 'weekdays': interestText += ' (ไม่รวม ส-อา)'; break;
+                        case 'saturday_only': interestText += ' (รวมเฉพาะวันเสาร์)'; break;
+                        case 'sunday_only': interestText += ' (รวมเฉพาะวันอาทิตย์)'; break;
                     }
                     document.getElementById('templateInterestInfo').textContent = interestText;
                     
-                    // Add interest data to QR code
                     qrData += `, InterestRate: ${interestRate}, Condition: ${interestCondition}`;
-
                     templateBorrowSection.classList.remove('hidden');
 
-                } else {
+                } else { // use
                     templateTitle.textContent = 'บันทึกการใช้เงินห้อง';
                     templateUserLabel.textContent = 'ผู้เบิกเงิน:';
                     templateBorrowSection.classList.add('hidden');
+                    templateAmount.classList.remove('text-green-600');
+                    templateAmount.classList.add('text-red-600');
+                    templateAmount.textContent = '- ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
                 }
 
-                // Generate QR Code
-                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
-                document.getElementById('templateQR').src = qrCodeUrl;
+                if (showQR) {
+                    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
+                    document.getElementById('templateQR').src = qrCodeUrl;
+                }
             };
 
             const generateSlipImage = () => {
-                // Ensure all images are loaded before rendering
                 html2canvas(slipTemplate, { 
                     useCORS: true,
                     scale: 2.0,
                     backgroundColor: '#ffffff',
                 }).then(canvas => {
                     generatedCanvas = canvas;
-                    slipOutput.innerHTML = ''; // Clear previous content
+                    slipOutput.innerHTML = ''; 
                     canvas.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md');
                     slipOutput.appendChild(canvas);
                     
@@ -513,9 +564,9 @@
 
             downloadButton.addEventListener('click', () => {
                 if (!generatedCanvas) return;
+                const fileName = `slip-${transactionType}-${Date.now()}`;
                 const link = document.createElement('a');
-                const fileName = transactionType === 'borrow' ? 'slip-borrow' : 'slip-use';
-                link.download = `${fileName}-${Date.now()}.png`;
+                link.download = `${fileName}.png`;
                 link.href = generatedCanvas.toDataURL('image/png');
                 link.click();
             });
@@ -536,18 +587,17 @@
                 const now = new Date();
                 const today = now.toISOString().slice(0, 10);
                 document.getElementById('transaction_date').value = today;
-                // Set default return date to 7 days from now
                 now.setDate(now.getDate() + 7);
                 document.getElementById('return_date').value = now.toISOString().slice(0, 10);
             };
 
             // --- INITIALIZATION ---
             setInitialDate();
+            setTransactionType('use'); 
             if (localStorage.getItem('darkMode') === 'true') {
                 applyDarkMode(true);
             } else {
-                // Still need to apply styles for light mode on init
-                updateToggleButtonsUI();
+                applyDarkMode(false);
             }
         });
     </script>

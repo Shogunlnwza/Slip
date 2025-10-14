@@ -159,10 +159,11 @@
                 <!-- Transaction Type Toggle -->
                 <div>
                     <label class="block text-sm font-medium text-muted mb-2">ประเภทรายการ</label>
-                    <div class="grid grid-cols-3 gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-700">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-700">
                         <button type="button" id="incomeButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">รายรับ</button>
                         <button type="button" id="useFundsButton" class="toggle-btn-active w-full py-2 text-sm font-semibold rounded-md shadow-sm">ใช้เงินห้อง</button>
                         <button type="button" id="borrowFundsButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">ยืมเงินห้อง</button>
+                        <button type="button" id="refundButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">คืนเงินห้อง</button>
                     </div>
                 </div>
 
@@ -173,7 +174,13 @@
                 </div>
                 <!-- Description -->
                 <div>
-                    <label for="description" class="block text-sm font-medium text-muted mb-2">รายการ</label>
+                     <div class="flex justify-between items-center mb-2">
+                         <label for="description" class="block text-sm font-medium text-muted">รายการ</label>
+                         <button type="button" id="generateDescriptionButton" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                             <span id="genDescText" class="mr-1">✨ สร้างอัตโนมัติ</span>
+                             <div id="descSpinner" class="spinner hidden" style="width: 0.75rem; height: 0.75rem; border-width: 2px; border-top-color: #4f46e5;"></div>
+                         </button>
+                    </div>
                     <input type="text" id="description" name="description" required placeholder="เช่น ค่าอุปกรณ์ทำบอร์ด" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                 </div>
                 <!-- User Name -->
@@ -316,6 +323,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+             // --- UTILITY: TOAST NOTIFICATION ---
+            const showToast = (message, isError = false) => {
+                const toast = document.createElement('div');
+                toast.textContent = message;
+                const bgColor = isError ? 'bg-red-500' : 'bg-green-500';
+                toast.className = `fixed top-5 right-5 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg transition-transform transform translate-x-full z-50`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.classList.remove('translate-x-full'), 100);
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            };
+
             // --- DOM ELEMENTS ---
             const slipForm = document.getElementById('slipForm');
             const generateButton = document.getElementById('generateButton');
@@ -334,6 +355,7 @@
             const incomeButton = document.getElementById('incomeButton');
             const useFundsButton = document.getElementById('useFundsButton');
             const borrowFundsButton = document.getElementById('borrowFundsButton');
+            const refundButton = document.getElementById('refundButton');
             const borrowInfoSection = document.getElementById('borrowInfoSection');
             const returnDateInput = document.getElementById('return_date');
             const userNameLabel = document.querySelector('label[for="user_name"]');
@@ -347,8 +369,16 @@
             const templateIcon = document.getElementById('templateIcon');
             const templateAmount = document.getElementById('templateAmount');
 
+            // Gemini API elements
+            const generateDescriptionButton = document.getElementById('generateDescriptionButton');
+            const descSpinner = document.getElementById('descSpinner');
+            const genDescText = document.getElementById('genDescText');
+            const amountInput = document.getElementById('amount');
+            const userNameInput = document.getElementById('user_name');
+            const descriptionInput = document.getElementById('description');
+
             let generatedCanvas = null;
-            let transactionType = 'use'; // 'use', 'borrow', or 'income'
+            let transactionType = 'use'; // 'use', 'borrow', 'income', 'refund'
 
             // --- STYLING CLASSES ---
             const activeBtnClasses = ['toggle-btn-active', 'bg-white', 'dark:bg-indigo-600', 'text-indigo-700', 'dark:text-white', 'shadow-sm'];
@@ -373,20 +403,88 @@
                 localStorage.setItem('darkMode', isDarkMode);
                 applyDarkMode(isDarkMode);
             });
+            
+            // --- GEMINI API INTEGRATION ---
+            const checkGenDescButtonState = () => {
+                if (amountInput.value && userNameInput.value) {
+                    generateDescriptionButton.disabled = false;
+                } else {
+                    generateDescriptionButton.disabled = true;
+                }
+            };
+
+            [amountInput, userNameInput].forEach(input => {
+                input.addEventListener('input', checkGenDescButtonState);
+            });
+
+            generateDescriptionButton.addEventListener('click', async () => {
+                const amount = amountInput.value;
+                const userName = userNameInput.value;
+                const typeMap = {
+                    'income': 'รายรับ', 'use': 'ใช้เงินห้อง',
+                    'borrow': 'ยืมเงินห้อง', 'refund': 'คืนเงินห้อง'
+                };
+                const currentType = typeMap[transactionType] || 'รายการ';
+
+                if (!amount || !userName) {
+                    showToast('กรุณากรอกจำนวนเงินและชื่อผู้ทำรายการก่อน', true);
+                    return;
+                }
+
+                generateDescriptionButton.disabled = true;
+                descSpinner.classList.remove('hidden');
+                genDescText.textContent = 'กำลังสร้าง...';
+
+                const systemPrompt = "คุณคือผู้ช่วยจัดการการเงินสำหรับห้องเรียน หน้าที่ของคุณคือสร้างคำอธิบายรายการที่สั้น กระชับ และเป็นทางการเป็นภาษาไทย โดยใช้ข้อมูลที่ได้รับ";
+                const userQuery = `สร้างคำอธิบายรายการสั้นๆ สำหรับสลิป (ไม่เกิน 10 คำ) โดยมีรายละเอียดดังนี้: ประเภทรายการคือ "${currentType}", ผู้ทำรายการคือ "${userName}", และจำนวนเงินคือ ${amount} บาท. ไม่ต้องมีคำว่า "รายการ:" นำหน้า`;
+
+                try {
+                    const apiKey = ""; // API key is handled by the environment
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                    const payload = {
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                    };
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        descriptionInput.value = candidate.content.parts[0].text.trim();
+                    } else {
+                         throw new Error("No valid response from API.");
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    showToast('ไม่สามารถสร้างคำอธิบายได้', true);
+                    descriptionInput.value = `[${currentType}] ${amount} บาท โดย ${userName}`; // Fallback
+                } finally {
+                    generateDescriptionButton.disabled = false;
+                    descSpinner.classList.add('hidden');
+                    genDescText.textContent = '✨ สร้างอัตโนมัติ';
+                    checkGenDescButtonState();
+                }
+            });
+
 
             // --- TRANSACTION TYPE TOGGLE LOGIC ---
             const updateToggleButtonsUI = () => {
                 const buttons = {
-                    income: incomeButton,
-                    use: useFundsButton,
-                    borrow: borrowFundsButton
+                    income: incomeButton, use: useFundsButton,
+                    borrow: borrowFundsButton, refund: refundButton
                 };
-
                 for (const key in buttons) {
                     buttons[key].classList.remove(...activeBtnClasses);
                     buttons[key].classList.add(...inactiveBtnClasses);
                 }
-
                 if (buttons[transactionType]) {
                     buttons[transactionType].classList.remove(...inactiveBtnClasses);
                     buttons[transactionType].classList.add(...activeBtnClasses);
@@ -399,15 +497,16 @@
                 returnDateInput.required = false;
                 interestRateInput.required = false;
                 
-                if (type === 'income') {
-                    userNameLabel.textContent = 'ผู้รับเงิน';
-                } else if (type === 'use') {
-                    userNameLabel.textContent = 'ผู้เบิกเงิน';
-                } else if (type === 'borrow') {
+                const labelMap = {
+                    'income': 'ผู้รับเงิน', 'use': 'ผู้เบิกเงิน',
+                    'borrow': 'ผู้ยืมเงิน', 'refund': 'ผู้คืนเงิน'
+                };
+                userNameLabel.textContent = labelMap[type];
+
+                if (type === 'borrow') {
                     borrowInfoSection.classList.remove('hidden');
                     returnDateInput.required = true;
                     interestRateInput.required = true;
-                    userNameLabel.textContent = 'ผู้ยืมเงิน';
                 }
                 updateToggleButtonsUI();
             };
@@ -415,6 +514,7 @@
             incomeButton.addEventListener('click', () => setTransactionType('income'));
             useFundsButton.addEventListener('click', () => setTransactionType('use'));
             borrowFundsButton.addEventListener('click', () => setTransactionType('borrow'));
+            refundButton.addEventListener('click', () => setTransactionType('refund'));
 
             // --- FORM LOGIC ---
             slipForm.addEventListener('submit', (e) => {
@@ -427,10 +527,10 @@
                 populateSlipTemplate(data);
                 
                 const qrImg = document.getElementById('templateQR');
-                if (qrImg.complete) {
+                if (qrImg.complete && qrImg.naturalWidth !== 0) {
                     generateSlipImage();
                 } else {
-                    qrImg.onload = () => { generateSlipImage(); };
+                    qrImg.onload = generateSlipImage;
                     qrImg.onerror = () => {
                         console.error("QR Code image failed to load.");
                         slipOutput.innerHTML = `<p class="text-red-500">ไม่สามารถโหลด QR Code ได้</p>`;
@@ -440,19 +540,12 @@
             });
 
             const populateSlipTemplate = (data) => {
-                // Get checkbox states
                 const showRef = document.getElementById('showRefCode').checked;
                 const showQR = document.getElementById('showQRCode').checked;
 
-                // Get elements to toggle
-                const refRow = document.getElementById('templateRefRow');
-                const qrSection = document.getElementById('templateQRSection');
+                document.getElementById('templateRefRow').classList.toggle('invisible-space', !showRef);
+                document.getElementById('templateQRSection').classList.toggle('invisible-space', !showQR);
 
-                // Toggle visibility based on checkboxes, preserving space
-                refRow.classList.toggle('invisible-space', !showRef);
-                qrSection.classList.toggle('invisible-space', !showQR);
-
-                // Format transaction date (without time)
                 const transactionDate = new Date(data.transaction_date);
                 const userTimezoneOffset = transactionDate.getTimezoneOffset() * 60000;
                 const adjustedDate = new Date(transactionDate.getTime() + userTimezoneOffset);
@@ -470,72 +563,62 @@
                 let qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
                 
                 templateIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-                templateIcon.classList.remove('text-red-500');
+                templateIcon.classList.remove('text-red-500', 'text-yellow-500');
                 templateIcon.classList.add('text-green-500');
                 templateAmount.classList.remove('text-red-600');
                 templateAmount.classList.add('text-green-600');
-                templateAmount.textContent = '+ ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
+                
+                const formattedAmount = ' ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
+                
+                templateBorrowSection.classList.add('hidden');
 
-                if (transactionType === 'income') {
-                    templateTitle.textContent = 'บันทึกรายรับเข้าห้อง';
-                    templateUserLabel.textContent = 'ผู้รับเงิน:';
-                    templateBorrowSection.classList.add('hidden');
-                } else if (transactionType === 'borrow') {
-                    templateTitle.textContent = 'บันทึกการยืมเงินห้อง';
-                    templateUserLabel.textContent = 'ผู้ยืมเงิน:';
-                    templateAmount.classList.remove('text-green-600');
-                    templateAmount.classList.add('text-red-600');
-                    templateAmount.textContent = '- ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
-                    
-                    const returnDate = new Date(data.return_date);
+                switch(transactionType) {
+                    case 'income':
+                    case 'refund':
+                        templateTitle.textContent = transactionType === 'income' ? 'บันทึกรายรับเข้าห้อง' : 'บันทึกการคืนเงินห้อง';
+                        templateUserLabel.textContent = transactionType === 'income' ? 'ผู้รับเงิน:' : 'ผู้คืนเงิน:';
+                        templateAmount.textContent = '+' + formattedAmount;
+                        break;
+                    case 'borrow':
+                    case 'use':
+                        templateTitle.textContent = transactionType === 'use' ? 'บันทึกการใช้เงินห้อง' : 'บันทึกการยืมเงินห้อง';
+                        templateUserLabel.textContent = transactionType === 'use' ? 'ผู้เบิกเงิน:' : 'ผู้ยืมเงิน:';
+                        templateAmount.textContent = '-' + formattedAmount;
+                        templateAmount.classList.remove('text-green-600');
+                        templateAmount.classList.add('text-red-600');
+                        break;
+                }
+                
+                if (transactionType === 'borrow') {
+                     const returnDate = new Date(data.return_date);
                     const adjustedReturnDate = new Date(returnDate.getTime() + userTimezoneOffset);
-                    const formattedReturnDate = adjustedReturnDate.toLocaleString('th-TH', {
-                        year: 'numeric', month: 'long', day: 'numeric'
-                    });
-                    document.getElementById('templateReturnDate').textContent = formattedReturnDate;
+                    document.getElementById('templateReturnDate').textContent = adjustedReturnDate.toLocaleString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
                     
-                    const interestRate = data.interest_rate || 0;
-                    const interestCondition = data.interest_condition;
-
-                    let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(interestRate).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
-
-                    switch (interestCondition) {
-                        case 'all': interestText += ' (รวม ส-อา)'; break;
-                        case 'weekdays': interestText += ' (ไม่รวม ส-อา)'; break;
-                        case 'saturday_only': interestText += ' (รวมเฉพาะวันเสาร์)'; break;
-                        case 'sunday_only': interestText += ' (รวมเฉพาะวันอาทิตย์)'; break;
-                    }
+                    let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(data.interest_rate || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
+                    const conditionMap = { 'all': ' (รวม ส-อา)', 'weekdays': ' (ไม่รวม ส-อา)', 'saturday_only': ' (รวมเฉพาะวันเสาร์)', 'sunday_only': ' (รวมเฉพาะวันอาทิตย์)' };
+                    interestText += conditionMap[data.interest_condition] || '';
                     document.getElementById('templateInterestInfo').textContent = interestText;
                     
-                    qrData += `, InterestRate: ${interestRate}, Condition: ${interestCondition}`;
+                    qrData += `, InterestRate: ${data.interest_rate}, Condition: ${data.interest_condition}`;
                     templateBorrowSection.classList.remove('hidden');
-
-                } else { // use
-                    templateTitle.textContent = 'บันทึกการใช้เงินห้อง';
-                    templateUserLabel.textContent = 'ผู้เบิกเงิน:';
-                    templateBorrowSection.classList.add('hidden');
-                    templateAmount.classList.remove('text-green-600');
-                    templateAmount.classList.add('text-red-600');
-                    templateAmount.textContent = '- ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
                 }
 
                 if (showQR) {
                     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
                     document.getElementById('templateQR').src = qrCodeUrl;
+                } else {
+                     document.getElementById('templateQR').src = "https://placehold.co/150x150/e2e8f0/e2e8f0?text=QR";
                 }
             };
 
             const generateSlipImage = () => {
                 html2canvas(slipTemplate, { 
-                    useCORS: true,
-                    scale: 2.0,
-                    backgroundColor: '#ffffff',
+                    useCORS: true, scale: 2.0, backgroundColor: '#ffffff',
                 }).then(canvas => {
                     generatedCanvas = canvas;
                     slipOutput.innerHTML = ''; 
                     canvas.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md');
                     slipOutput.appendChild(canvas);
-                    
                     showModal();
                     setLoadingState(false);
                 }).catch(err => {
@@ -545,28 +628,16 @@
             };
 
             // --- MODAL CONTROLS ---
-            const showModal = () => {
-                previewModal.classList.remove('hidden');
-                previewModal.classList.add('open');
-            };
-
-            const hideModal = () => {
-                previewModal.classList.add('hidden');
-                previewModal.classList.remove('open');
-            };
+            const showModal = () => { previewModal.classList.remove('hidden'); previewModal.classList.add('open'); };
+            const hideModal = () => { previewModal.classList.add('hidden'); previewModal.classList.remove('open'); };
 
             closeModalButton.addEventListener('click', hideModal);
-            previewModal.addEventListener('click', (e) => {
-                if (e.target === previewModal) {
-                    hideModal();
-                }
-            });
+            previewModal.addEventListener('click', (e) => { if (e.target === previewModal) hideModal(); });
 
             downloadButton.addEventListener('click', () => {
                 if (!generatedCanvas) return;
-                const fileName = `slip-${transactionType}-${Date.now()}`;
                 const link = document.createElement('a');
-                link.download = `${fileName}.png`;
+                link.download = `slip-${transactionType}-${Date.now()}.png`;
                 link.href = generatedCanvas.toDataURL('image/png');
                 link.click();
             });
@@ -574,19 +645,13 @@
             // --- UTILITY FUNCTIONS ---
             const setLoadingState = (isLoading) => {
                 generateButton.disabled = isLoading;
-                if (isLoading) {
-                    generateButtonText.textContent = 'กำลังสร้าง...';
-                    generateSpinner.classList.remove('hidden');
-                } else {
-                    generateButtonText.textContent = 'สร้างสลิป';
-                    generateSpinner.classList.add('hidden');
-                }
+                generateButtonText.textContent = isLoading ? 'กำลังสร้าง...' : 'สร้างสลิป';
+                generateSpinner.classList.toggle('hidden', !isLoading);
             };
 
             const setInitialDate = () => {
                 const now = new Date();
-                const today = now.toISOString().slice(0, 10);
-                document.getElementById('transaction_date').value = today;
+                document.getElementById('transaction_date').value = now.toISOString().slice(0, 10);
                 now.setDate(now.getDate() + 7);
                 document.getElementById('return_date').value = now.toISOString().slice(0, 10);
             };
@@ -594,12 +659,10 @@
             // --- INITIALIZATION ---
             setInitialDate();
             setTransactionType('use'); 
-            if (localStorage.getItem('darkMode') === 'true') {
-                applyDarkMode(true);
-            } else {
-                applyDarkMode(false);
-            }
+            checkGenDescButtonState();
+            applyDarkMode(localStorage.getItem('darkMode') === 'true');
         });
     </script>
 </body>
 </html>
+

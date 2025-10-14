@@ -174,13 +174,7 @@
                 </div>
                 <!-- Description -->
                 <div>
-                     <div class="flex justify-between items-center mb-2">
-                         <label for="description" class="block text-sm font-medium text-muted">รายการ</label>
-                         <button type="button" id="generateDescriptionButton" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                             <span id="genDescText" class="mr-1">✨ สร้างอัตโนมัติ</span>
-                             <div id="descSpinner" class="spinner hidden" style="width: 0.75rem; height: 0.75rem; border-width: 2px; border-top-color: #4f46e5;"></div>
-                         </button>
-                    </div>
+                    <label for="description" class="block text-sm font-medium text-muted mb-2">รายการ</label>
                     <input type="text" id="description" name="description" required placeholder="เช่น ค่าอุปกรณ์ทำบอร์ด" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                 </div>
                 <!-- User Name -->
@@ -213,6 +207,19 @@
                             <option value="saturday_only">รวมเฉพาะวันเสาร์</option>
                             <option value="sunday_only">รวมเฉพาะวันอาทิตย์</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Refund Info Section (Hidden by default) -->
+                <div id="refundInfoSection" class="hidden space-y-4 pt-2">
+                    <hr class="border-gray-300 dark:border-gray-600">
+                    <div>
+                        <label for="remaining_amount" class="block text-sm font-medium text-muted mb-2">เหลือจำนวนที่คืนอยู่ (บาท)</label>
+                        <input type="number" id="remaining_amount" name="remaining_amount" step="0.01" placeholder="เช่น 500.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                    </div>
+                    <div>
+                        <label for="total_interest" class="block text-sm font-medium text-muted mb-2">รวมดอกเบี้ย (ถ้ามี)</label>
+                        <input type="number" id="total_interest" name="total_interest" step="0.01" placeholder="เช่น 20.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
                     </div>
                 </div>
 
@@ -312,6 +319,18 @@
                     <p id="templateInterestInfo"></p>
                 </div>
             </div>
+            
+            <!-- Refund Info on Slip -->
+            <div id="templateRefundSection" class="hidden border-b border-dashed pb-4 pt-3 space-y-2 text-sm">
+                 <div class="flex justify-between">
+                    <span class="text-gray-600">รวมดอกเบี้ย:</span>
+                    <span class="font-semibold text-right" id="templateTotalInterest"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">ยอดคงเหลือ:</span>
+                    <span class="font-semibold text-right" id="templateRemainingAmount"></span>
+                </div>
+            </div>
 
 
             <div id="templateQRSection" class="mt-6 text-center">
@@ -323,20 +342,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-             // --- UTILITY: TOAST NOTIFICATION ---
-            const showToast = (message, isError = false) => {
-                const toast = document.createElement('div');
-                toast.textContent = message;
-                const bgColor = isError ? 'bg-red-500' : 'bg-green-500';
-                toast.className = `fixed top-5 right-5 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg transition-transform transform translate-x-full z-50`;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.classList.remove('translate-x-full'), 100);
-                setTimeout(() => {
-                    toast.classList.add('translate-x-full');
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
-            };
-
             // --- DOM ELEMENTS ---
             const slipForm = document.getElementById('slipForm');
             const generateButton = document.getElementById('generateButton');
@@ -357,6 +362,7 @@
             const borrowFundsButton = document.getElementById('borrowFundsButton');
             const refundButton = document.getElementById('refundButton');
             const borrowInfoSection = document.getElementById('borrowInfoSection');
+            const refundInfoSection = document.getElementById('refundInfoSection');
             const returnDateInput = document.getElementById('return_date');
             const userNameLabel = document.querySelector('label[for="user_name"]');
             
@@ -366,16 +372,9 @@
             const templateTitle = document.getElementById('templateTitle');
             const templateUserLabel = document.getElementById('templateUserLabel');
             const templateBorrowSection = document.getElementById('templateBorrowSection');
+            const templateRefundSection = document.getElementById('templateRefundSection');
             const templateIcon = document.getElementById('templateIcon');
             const templateAmount = document.getElementById('templateAmount');
-
-            // Gemini API elements
-            const generateDescriptionButton = document.getElementById('generateDescriptionButton');
-            const descSpinner = document.getElementById('descSpinner');
-            const genDescText = document.getElementById('genDescText');
-            const amountInput = document.getElementById('amount');
-            const userNameInput = document.getElementById('user_name');
-            const descriptionInput = document.getElementById('description');
 
             let generatedCanvas = null;
             let transactionType = 'use'; // 'use', 'borrow', 'income', 'refund'
@@ -403,88 +402,21 @@
                 localStorage.setItem('darkMode', isDarkMode);
                 applyDarkMode(isDarkMode);
             });
-            
-            // --- GEMINI API INTEGRATION ---
-            const checkGenDescButtonState = () => {
-                if (amountInput.value && userNameInput.value) {
-                    generateDescriptionButton.disabled = false;
-                } else {
-                    generateDescriptionButton.disabled = true;
-                }
-            };
-
-            [amountInput, userNameInput].forEach(input => {
-                input.addEventListener('input', checkGenDescButtonState);
-            });
-
-            generateDescriptionButton.addEventListener('click', async () => {
-                const amount = amountInput.value;
-                const userName = userNameInput.value;
-                const typeMap = {
-                    'income': 'รายรับ', 'use': 'ใช้เงินห้อง',
-                    'borrow': 'ยืมเงินห้อง', 'refund': 'คืนเงินห้อง'
-                };
-                const currentType = typeMap[transactionType] || 'รายการ';
-
-                if (!amount || !userName) {
-                    showToast('กรุณากรอกจำนวนเงินและชื่อผู้ทำรายการก่อน', true);
-                    return;
-                }
-
-                generateDescriptionButton.disabled = true;
-                descSpinner.classList.remove('hidden');
-                genDescText.textContent = 'กำลังสร้าง...';
-
-                const systemPrompt = "คุณคือผู้ช่วยจัดการการเงินสำหรับห้องเรียน หน้าที่ของคุณคือสร้างคำอธิบายรายการที่สั้น กระชับ และเป็นทางการเป็นภาษาไทย โดยใช้ข้อมูลที่ได้รับ";
-                const userQuery = `สร้างคำอธิบายรายการสั้นๆ สำหรับสลิป (ไม่เกิน 10 คำ) โดยมีรายละเอียดดังนี้: ประเภทรายการคือ "${currentType}", ผู้ทำรายการคือ "${userName}", และจำนวนเงินคือ ${amount} บาท. ไม่ต้องมีคำว่า "รายการ:" นำหน้า`;
-
-                try {
-                    const apiKey = ""; // API key is handled by the environment
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                    const payload = {
-                        contents: [{ parts: [{ text: userQuery }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] },
-                    };
-
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) throw new Error(`API call failed: ${response.status}`);
-
-                    const result = await response.json();
-                    const candidate = result.candidates?.[0];
-
-                    if (candidate && candidate.content?.parts?.[0]?.text) {
-                        descriptionInput.value = candidate.content.parts[0].text.trim();
-                    } else {
-                         throw new Error("No valid response from API.");
-                    }
-                } catch (error) {
-                    console.error("Error calling Gemini API:", error);
-                    showToast('ไม่สามารถสร้างคำอธิบายได้', true);
-                    descriptionInput.value = `[${currentType}] ${amount} บาท โดย ${userName}`; // Fallback
-                } finally {
-                    generateDescriptionButton.disabled = false;
-                    descSpinner.classList.add('hidden');
-                    genDescText.textContent = '✨ สร้างอัตโนมัติ';
-                    checkGenDescButtonState();
-                }
-            });
-
 
             // --- TRANSACTION TYPE TOGGLE LOGIC ---
             const updateToggleButtonsUI = () => {
                 const buttons = {
-                    income: incomeButton, use: useFundsButton,
-                    borrow: borrowFundsButton, refund: refundButton
+                    income: incomeButton,
+                    use: useFundsButton,
+                    borrow: borrowFundsButton,
+                    refund: refundButton
                 };
+
                 for (const key in buttons) {
                     buttons[key].classList.remove(...activeBtnClasses);
                     buttons[key].classList.add(...inactiveBtnClasses);
                 }
+
                 if (buttons[transactionType]) {
                     buttons[transactionType].classList.remove(...inactiveBtnClasses);
                     buttons[transactionType].classList.add(...activeBtnClasses);
@@ -494,19 +426,22 @@
             const setTransactionType = (type) => {
                 transactionType = type;
                 borrowInfoSection.classList.add('hidden');
+                refundInfoSection.classList.add('hidden'); // Hide refund section by default
                 returnDateInput.required = false;
                 interestRateInput.required = false;
                 
-                const labelMap = {
-                    'income': 'ผู้รับเงิน', 'use': 'ผู้เบิกเงิน',
-                    'borrow': 'ผู้ยืมเงิน', 'refund': 'ผู้คืนเงิน'
-                };
-                userNameLabel.textContent = labelMap[type];
-
-                if (type === 'borrow') {
+                if (type === 'income') {
+                    userNameLabel.textContent = 'ผู้รับเงิน';
+                } else if (type === 'use') {
+                    userNameLabel.textContent = 'ผู้เบิกเงิน';
+                } else if (type === 'borrow') {
                     borrowInfoSection.classList.remove('hidden');
                     returnDateInput.required = true;
                     interestRateInput.required = true;
+                    userNameLabel.textContent = 'ผู้ยืมเงิน';
+                } else if (type === 'refund') {
+                    refundInfoSection.classList.remove('hidden'); // Show for refund type
+                    userNameLabel.textContent = 'ผู้คืนเงิน';
                 }
                 updateToggleButtonsUI();
             };
@@ -527,10 +462,10 @@
                 populateSlipTemplate(data);
                 
                 const qrImg = document.getElementById('templateQR');
-                if (qrImg.complete && qrImg.naturalWidth !== 0) {
+                if (qrImg.complete) {
                     generateSlipImage();
                 } else {
-                    qrImg.onload = generateSlipImage;
+                    qrImg.onload = () => { generateSlipImage(); };
                     qrImg.onerror = () => {
                         console.error("QR Code image failed to load.");
                         slipOutput.innerHTML = `<p class="text-red-500">ไม่สามารถโหลด QR Code ได้</p>`;
@@ -540,12 +475,19 @@
             });
 
             const populateSlipTemplate = (data) => {
+                // Get checkbox states
                 const showRef = document.getElementById('showRefCode').checked;
                 const showQR = document.getElementById('showQRCode').checked;
 
-                document.getElementById('templateRefRow').classList.toggle('invisible-space', !showRef);
-                document.getElementById('templateQRSection').classList.toggle('invisible-space', !showQR);
+                // Get elements to toggle
+                const refRow = document.getElementById('templateRefRow');
+                const qrSection = document.getElementById('templateQRSection');
 
+                // Toggle visibility based on checkboxes, preserving space
+                refRow.classList.toggle('invisible-space', !showRef);
+                qrSection.classList.toggle('invisible-space', !showQR);
+
+                // Format transaction date (without time)
                 const transactionDate = new Date(data.transaction_date);
                 const userTimezoneOffset = transactionDate.getTimezoneOffset() * 60000;
                 const adjustedDate = new Date(transactionDate.getTime() + userTimezoneOffset);
@@ -562,22 +504,20 @@
                 
                 let qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
                 
-                templateIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`;
-                templateIcon.classList.remove('text-red-500', 'text-yellow-500');
-                templateIcon.classList.add('text-green-500');
-                templateAmount.classList.remove('text-red-600');
-                templateAmount.classList.add('text-green-600');
-                
-                const formattedAmount = ' ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
-                
+                // --- Reset template sections and styles ---
                 templateBorrowSection.classList.add('hidden');
+                templateRefundSection.classList.add('hidden');
+                const formattedAmount = ' ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
 
+                // --- Set styles and text based on transaction type ---
                 switch(transactionType) {
                     case 'income':
                     case 'refund':
                         templateTitle.textContent = transactionType === 'income' ? 'บันทึกรายรับเข้าห้อง' : 'บันทึกการคืนเงินห้อง';
                         templateUserLabel.textContent = transactionType === 'income' ? 'ผู้รับเงิน:' : 'ผู้คืนเงิน:';
                         templateAmount.textContent = '+' + formattedAmount;
+                        templateAmount.classList.remove('text-red-600');
+                        templateAmount.classList.add('text-green-600');
                         break;
                     case 'borrow':
                     case 'use':
@@ -589,36 +529,60 @@
                         break;
                 }
                 
+                // --- Populate type-specific sections ---
                 if (transactionType === 'borrow') {
-                     const returnDate = new Date(data.return_date);
+                    const returnDate = new Date(data.return_date);
                     const adjustedReturnDate = new Date(returnDate.getTime() + userTimezoneOffset);
                     document.getElementById('templateReturnDate').textContent = adjustedReturnDate.toLocaleString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
                     
-                    let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(data.interest_rate || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
-                    const conditionMap = { 'all': ' (รวม ส-อา)', 'weekdays': ' (ไม่รวม ส-อา)', 'saturday_only': ' (รวมเฉพาะวันเสาร์)', 'sunday_only': ' (รวมเฉพาะวันอาทิตย์)' };
+                    const interestRate = data.interest_rate || 0;
+                    let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(interestRate).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
+                    const conditionMap = {'all': ' (รวม ส-อา)', 'weekdays': ' (ไม่รวม ส-อา)', 'saturday_only': ' (รวมเฉพาะวันเสาร์)', 'sunday_only': ' (รวมเฉพาะวันอาทิตย์)'};
                     interestText += conditionMap[data.interest_condition] || '';
                     document.getElementById('templateInterestInfo').textContent = interestText;
                     
-                    qrData += `, InterestRate: ${data.interest_rate}, Condition: ${data.interest_condition}`;
+                    qrData += `, InterestRate: ${interestRate}, Condition: ${data.interest_condition}`;
                     templateBorrowSection.classList.remove('hidden');
                 }
 
+                if (transactionType === 'refund') {
+                    const totalInterest = parseFloat(data.total_interest || 0);
+                    const remainingAmount = parseFloat(data.remaining_amount || 0);
+
+                    const totalInterestEl = document.getElementById('templateTotalInterest');
+                    const remainingAmountEl = document.getElementById('templateRemainingAmount');
+                    
+                    if (totalInterest > 0) {
+                        totalInterestEl.parentElement.classList.remove('hidden');
+                        totalInterestEl.textContent = totalInterest.toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
+                    } else {
+                        totalInterestEl.parentElement.classList.add('hidden');
+                    }
+                    
+                    remainingAmountEl.textContent = remainingAmount.toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
+
+                    templateRefundSection.classList.remove('hidden');
+                    qrData += `, TotalInterest: ${totalInterest}, Remaining: ${remainingAmount}`;
+                }
+
+                // --- Generate QR Code ---
                 if (showQR) {
                     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
                     document.getElementById('templateQR').src = qrCodeUrl;
-                } else {
-                     document.getElementById('templateQR').src = "https://placehold.co/150x150/e2e8f0/e2e8f0?text=QR";
                 }
             };
 
             const generateSlipImage = () => {
                 html2canvas(slipTemplate, { 
-                    useCORS: true, scale: 2.0, backgroundColor: '#ffffff',
+                    useCORS: true,
+                    scale: 2.0,
+                    backgroundColor: '#ffffff',
                 }).then(canvas => {
                     generatedCanvas = canvas;
                     slipOutput.innerHTML = ''; 
                     canvas.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md');
                     slipOutput.appendChild(canvas);
+                    
                     showModal();
                     setLoadingState(false);
                 }).catch(err => {
@@ -628,16 +592,28 @@
             };
 
             // --- MODAL CONTROLS ---
-            const showModal = () => { previewModal.classList.remove('hidden'); previewModal.classList.add('open'); };
-            const hideModal = () => { previewModal.classList.add('hidden'); previewModal.classList.remove('open'); };
+            const showModal = () => {
+                previewModal.classList.remove('hidden');
+                previewModal.classList.add('open');
+            };
+
+            const hideModal = () => {
+                previewModal.classList.add('hidden');
+                previewModal.classList.remove('open');
+            };
 
             closeModalButton.addEventListener('click', hideModal);
-            previewModal.addEventListener('click', (e) => { if (e.target === previewModal) hideModal(); });
+            previewModal.addEventListener('click', (e) => {
+                if (e.target === previewModal) {
+                    hideModal();
+                }
+            });
 
             downloadButton.addEventListener('click', () => {
                 if (!generatedCanvas) return;
+                const fileName = `slip-${transactionType}-${Date.now()}`;
                 const link = document.createElement('a');
-                link.download = `slip-${transactionType}-${Date.now()}.png`;
+                link.download = `${fileName}.png`;
                 link.href = generatedCanvas.toDataURL('image/png');
                 link.click();
             });
@@ -645,13 +621,19 @@
             // --- UTILITY FUNCTIONS ---
             const setLoadingState = (isLoading) => {
                 generateButton.disabled = isLoading;
-                generateButtonText.textContent = isLoading ? 'กำลังสร้าง...' : 'สร้างสลิป';
-                generateSpinner.classList.toggle('hidden', !isLoading);
+                if (isLoading) {
+                    generateButtonText.textContent = 'กำลังสร้าง...';
+                    generateSpinner.classList.remove('hidden');
+                } else {
+                    generateButtonText.textContent = 'สร้างสลิป';
+                    generateSpinner.classList.add('hidden');
+                }
             };
 
             const setInitialDate = () => {
                 const now = new Date();
-                document.getElementById('transaction_date').value = now.toISOString().slice(0, 10);
+                const today = now.toISOString().slice(0, 10);
+                document.getElementById('transaction_date').value = today;
                 now.setDate(now.getDate() + 7);
                 document.getElementById('return_date').value = now.toISOString().slice(0, 10);
             };
@@ -659,10 +641,14 @@
             // --- INITIALIZATION ---
             setInitialDate();
             setTransactionType('use'); 
-            checkGenDescButtonState();
-            applyDarkMode(localStorage.getItem('darkMode') === 'true');
+            if (localStorage.getItem('darkMode') === 'true') {
+                applyDarkMode(true);
+            } else {
+                applyDarkMode(false);
+            }
         });
     </script>
 </body>
 </html>
+
 

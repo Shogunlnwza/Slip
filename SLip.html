@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Slip V3 - เครื่องมือสร้างสลิป</title>
+    <title>Classroom Slip V4 - เครื่องมือสร้างสลิป</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -230,7 +230,11 @@
             </div>
 
             <!-- Options -->
-            <div class="flex gap-4 pt-2">
+            <div class="flex flex-col gap-2 pt-2">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" id="showRef" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                    <span class="text-sm text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 transition-colors">แสดงรหัสอ้างอิง (Ref No.)</span>
+                </label>
                 <label class="flex items-center gap-2 cursor-pointer group">
                     <input type="checkbox" id="showQRCode" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
                     <span class="text-sm text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 transition-colors">แสดง QR Code</span>
@@ -254,14 +258,12 @@
     <!-- Hidden Template (High Res) -->
     <div style="position: fixed; left: -9999px; top: 0;">
         <div id="slipTemplate">
-            <!-- Header Strip (Adjusted: Removed Text) -->
-            <div id="slipHeaderBg" class="h-24 flex items-center justify-center relative overflow-hidden">
+            <!-- Header Strip (Adjusted: Only Type Text, No Icon) -->
+            <div id="slipHeaderBg" class="h-24 flex items-center justify-center relative overflow-hidden shadow-sm">
                 <div class="absolute inset-0 bg-pattern opacity-10"></div>
-                <div class="z-10 flex flex-col items-center text-white pt-2">
-                    <div class="bg-white/20 p-2 rounded-full mb-1 backdrop-blur-sm">
-                        <svg id="slipIcon" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </div>
-                    <!-- TEXT REMOVED HERE AS REQUESTED -->
+                <div class="z-10 flex flex-col items-center text-white pt-1">
+                    <!-- Title without Icon -->
+                    <h2 id="slipHeaderText" class="text-3xl font-bold tracking-wide drop-shadow-md">รายรับ</h2>
                 </div>
             </div>
 
@@ -293,7 +295,7 @@
                         <span class="text-gray-500 w-24">วันที่ทำรายการ</span>
                         <span id="slipBodyDate" class="font-semibold text-gray-800 text-right flex-1">12 เม.ย. 68 14:30 น.</span>
                     </div>
-                    <div class="flex justify-between items-start">
+                    <div id="slipRefRow" class="flex justify-between items-start">
                         <span class="text-gray-500 w-24">รหัสอ้างอิง</span>
                         <span id="slipRef" class="font-mono text-gray-600 text-xs text-right pt-0.5">REF12345678</span>
                     </div>
@@ -339,24 +341,25 @@
         <div id="modalBackdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity opacity-0"></div>
         
         <!-- Content -->
-        <div id="modalContent" class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 opacity-0 transition-all duration-300">
+        <!-- Added max-h-[85vh] for more space and ensuring overflow works properly -->
+        <div id="modalContent" class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[90vh] overflow-hidden transform scale-95 opacity-0 transition-all duration-300">
             <!-- Modal Header -->
-            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
                 <h3 class="font-bold text-gray-800 dark:text-white">ตัวอย่างสลิป</h3>
                 <button id="closeModal" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
                 </button>
             </div>
             
-            <!-- Image Area -->
-            <div class="p-6 bg-gray-200 dark:bg-slate-900 flex justify-center overflow-auto max-h-[60vh]">
-                <div id="previewArea" class="shadow-lg rounded-lg overflow-hidden">
+            <!-- Image Area (Scrollable) -->
+            <div class="p-4 bg-gray-200 dark:bg-slate-900 flex-1 overflow-y-auto">
+                <div id="previewArea" class="shadow-lg rounded-lg overflow-hidden mx-auto max-w-full">
                     <!-- Canvas appended here -->
                 </div>
             </div>
             
             <!-- Actions -->
-            <div class="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+            <div class="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-gray-700 flex gap-3 flex-shrink-0">
                 <button id="downloadBtn" class="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-lg shadow-green-500/30 transition-all flex justify-center items-center gap-2">
                     <i data-lucide="download" class="w-4 h-4"></i> บันทึกรูปภาพ
                 </button>
@@ -381,17 +384,18 @@
         const template = {
             el: document.getElementById('slipTemplate'),
             header: document.getElementById('slipHeaderBg'),
+            headerText: document.getElementById('slipHeaderText'), // New Header Text
             amount: document.getElementById('slipAmount'),
             desc: document.getElementById('slipDesc'),
             user: document.getElementById('slipUser'),
             userLabel: document.getElementById('slipUserLabel'),
             ref: document.getElementById('slipRef'),
-            bodyDate: document.getElementById('slipBodyDate'), // New Location for Date
+            refRow: document.getElementById('slipRefRow'), // To toggle visibility
+            bodyDate: document.getElementById('slipBodyDate'), 
             qr: document.getElementById('slipQR'),
             qrRow: document.getElementById('slipQRRow'),
             borrowRow: document.getElementById('slipBorrowRow'),
-            refundRow: document.getElementById('slipRefundRow'),
-            icon: document.getElementById('slipIcon')
+            refundRow: document.getElementById('slipRefundRow')
         };
 
         let currentType = 'income'; // Default
@@ -514,8 +518,8 @@
 
             // 1. Populate Template Header
             template.header.className = `h-24 flex items-center justify-center relative overflow-hidden ${config.gradient}`;
-            
-            // Removed header text assignment here
+            // Set Text instead of Icon
+            template.headerText.textContent = config.label;
 
             // 2. Populate Main Info
             template.amount.textContent = amount;
@@ -528,8 +532,18 @@
             // Populate Date in Body
             template.bodyDate.textContent = `${displayDate} ${nowTime}`;
 
-            const refId = 'REF' + Date.now().toString().slice(-8);
-            template.ref.textContent = refId;
+            // Handle Reference Logic
+            const showRef = document.getElementById('showRef').checked;
+            if (showRef) {
+                const refId = 'REF' + Date.now().toString().slice(-8);
+                template.ref.textContent = refId;
+                template.refRow.classList.remove('hidden');
+                template.refRow.classList.add('flex');
+            } else {
+                template.ref.textContent = ''; // Clear for QR Data safety
+                template.refRow.classList.add('hidden');
+                template.refRow.classList.remove('flex');
+            }
 
             // 3. Dynamic Rows
             template.borrowRow.classList.add('hidden');
@@ -556,7 +570,8 @@
             const showQR = document.getElementById('showQRCode').checked;
             if (showQR) {
                 template.qrRow.classList.remove('hidden');
-                const qrData = `Ref:${refId}|Type:${currentType}|Amt:${amount}|User:${template.user.textContent}`;
+                const refVal = showRef ? template.ref.textContent : 'N/A';
+                const qrData = `Ref:${refVal}|Type:${currentType}|Amt:${amount}|User:${template.user.textContent}`;
                 template.qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}&margin=0`;
                 // Wait for QR to load
                 await new Promise(resolve => {

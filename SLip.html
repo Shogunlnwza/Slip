@@ -3,652 +3,644 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slip Generator - เครื่องมือสร้างสลิป</title>
+    <title>Classroom Slip V3 - เครื่องมือสร้างสลิป</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#ec4899',
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Sarabun', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     
-    <!-- html2canvas library for generating images -->
+    <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- Base Styles & Fonts --- */
         body {
-            font-family: 'Sarabun', 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            font-family: 'Sarabun', sans-serif;
+            background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+            min-height: 100vh;
         }
 
-        /* --- Dark Mode Styles --- */
         body.dark {
-            background-color: #1a202c;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             color: #e2e8f0;
         }
-        body.dark .card-bg {
-            background-color: #2d3748;
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
-        body.dark .text-header {
-            color: #e2e8f0;
+        body.dark .glass-card {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-        body.dark .text-muted {
-            color: #a0aec0;
-        }
-        body.dark input, body.dark select, body.dark .toggle-btn-inactive {
-            background-color: #4a5568;
-            color: #e2e8f0;
-            border-color: #4a5568;
-        }
-        body.dark input[type="checkbox"] {
-            background-color: #4a5568;
+
+        /* Input Fields in Dark Mode - Higher Contrast */
+        body.dark input, body.dark select {
+            background-color: #334155; /* slate-700 - Lighter than bg */
+            border-color: #475569;
+            color: #f1f5f9;
         }
         body.dark input::placeholder {
-            color: #a0aec0;
-        }
-        body.dark .modal-content-bg {
-             background-color: #2d3748;
-        }
-        body.dark .modal-header-text {
-            color: #e2e8f0;
-        }
-        body.dark .close-btn-bg {
-            background-color: #4a5568;
-            color: #e2e8f0;
-        }
-        body.dark .close-btn-bg:hover {
-            background-color: #718096;
-        }
-        body.dark .toggle-btn-inactive {
-            color: #a0aec0;
-        }
-        body.dark .toggle-btn-active {
-            background-color: #4f46e5; /* indigo-600 */
-            color: #ffffff;
+            color: #94a3b8;
         }
 
-
-        /* --- Input Field Focus Glow --- */
-        input:focus, select:focus {
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.5); /* blue-300 */
-            border-color: #60a5fa !important; /* blue-400 */
-        }
-
-        /* --- Button Animation --- */
-        .btn-animated {
-            transition: all 0.2s ease-in-out;
-        }
-        .btn-animated:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .btn-animated:active {
-            transform: translateY(0px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        /* --- Modal Animation --- */
-        .modal.open { display: flex; }
-        .modal-content {
-            animation: zoomIn 0.3s ease-out;
-        }
-        @keyframes zoomIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        
-        /* --- Slip Template Styles --- */
+        /* Slip Styles */
         #slipTemplate {
             font-family: 'Sarabun', sans-serif;
-            background-color: #ffffff !important;
-            color: #333 !important;
+            background-color: #fff;
+            width: 450px; 
+            position: relative;
+            overflow: hidden;
         }
-        #slipTemplate * {
-            color: #333 !important;
-        }
-        #slipTemplate .text-red-600 {
-            color: #dc2626 !important;
-        }
-        #slipTemplate .text-green-600 {
-            color: #16a34a !important;
+        
+        /* Watermark Pattern */
+        .slip-watermark {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            z-index: 0;
+            pointer-events: none;
         }
 
-        /* --- Class to hide element but preserve space --- */
-        .invisible-space {
-            visibility: hidden;
+        .slip-content {
+            position: relative;
+            z-index: 10;
         }
 
-        /* --- Loading Spinner --- */
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            width: 1.25rem;
-            height: 1.25rem;
-            animation: spin 1s linear infinite;
+        /* Animations */
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .animate-slide-up {
+            animation: slideUp 0.4s ease-out forwards;
         }
     </style>
 </head>
-<body class="antialiased">
+<body class="antialiased py-8 px-4 flex flex-col items-center">
 
-    <!-- Main Container -->
-    <div class="container mx-auto min-h-screen flex flex-col items-center justify-center p-4">
-        
-        <!-- Form Card -->
-        <div class="card-bg w-full max-w-lg p-6 md:p-8 bg-white rounded-xl shadow-lg">
-            <!-- Header -->
-            <header class="text-center mb-6 relative">
-                <h1 class="text-3xl md:text-4xl font-bold text-header">Slip Generator</h1>
-                <p class="text-muted mt-2 text-md">สำหรับบันทึกการใช้เงินห้อง</p>
-                <!-- Dark Mode Toggle -->
-                <button id="darkModeToggle" class="absolute top-0 right-0 p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 btn-animated focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg id="sunIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M12 16a4 4 0 110-8 4 4 0 010 8z"></path></svg>
-                    <svg id="moonIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+    <!-- Header / Nav -->
+    <div class="w-full max-w-lg flex justify-between items-center mb-6 animate-slide-up" style="animation-delay: 0.1s;">
+        <div>
+            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-pink-600 dark:from-indigo-400 dark:to-pink-400">
+                Classroom Slip
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">ระบบสร้างสลิปบันทึกเงินห้อง</p>
+        </div>
+        <button id="darkModeToggle" class="p-2.5 rounded-full bg-white dark:bg-slate-800 shadow-md hover:shadow-lg transition-all text-gray-700 dark:text-gray-200">
+            <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+            <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+        </button>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="glass-card w-full max-w-lg rounded-2xl p-6 md:p-8 animate-slide-up" style="animation-delay: 0.2s;">
+        <form id="slipForm" class="space-y-5">
+            
+            <!-- Type Selector -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-xl">
+                <button type="button" data-type="income" class="type-btn active py-2 px-3 rounded-lg text-sm font-medium transition-all text-center">
+                    <span class="block text-xs opacity-70">รับเงิน</span>
+                    <span class="font-bold">รายรับ</span>
                 </button>
-            </header>
+                <button type="button" data-type="use" class="type-btn py-2 px-3 rounded-lg text-sm font-medium transition-all text-center">
+                    <span class="block text-xs opacity-70">เบิกจ่าย</span>
+                    <span class="font-bold">ใช้เงิน</span>
+                </button>
+                <button type="button" data-type="borrow" class="type-btn py-2 px-3 rounded-lg text-sm font-medium transition-all text-center">
+                    <span class="block text-xs opacity-70">ยืมเงิน</span>
+                    <span class="font-bold">ยืมเงิน</span>
+                </button>
+                <button type="button" data-type="refund" class="type-btn py-2 px-3 rounded-lg text-sm font-medium transition-all text-center">
+                    <span class="block text-xs opacity-70">คืนเงิน</span>
+                    <span class="font-bold">คืนเงิน</span>
+                </button>
+            </div>
 
-            <!-- Form Section -->
-            <form id="slipForm" class="space-y-6">
-                <!-- Transaction Type Toggle -->
-                <div>
-                    <label class="block text-sm font-medium text-muted mb-2">ประเภทรายการ</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg p-1 bg-gray-200 dark:bg-gray-700">
-                        <button type="button" id="incomeButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">รายรับ</button>
-                        <button type="button" id="useFundsButton" class="toggle-btn-active w-full py-2 text-sm font-semibold rounded-md shadow-sm">ใช้เงินห้อง</button>
-                        <button type="button" id="borrowFundsButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">ยืมเงินห้อง</button>
-                        <button type="button" id="refundButton" class="toggle-btn-inactive w-full py-2 text-sm font-semibold rounded-md">คืนเงินห้อง</button>
+            <!-- Amount Input -->
+            <div class="relative group">
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">จำนวนเงิน (บาท)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 font-bold">฿</span>
                     </div>
+                    <input type="number" id="amount" step="0.01" required placeholder="0.00" 
+                        class="pl-8 w-full bg-gray-50 border-0 rounded-xl py-3 px-4 text-xl font-bold text-gray-800 focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-gray-300">
                 </div>
+            </div>
 
-                <!-- Amount -->
-                <div>
-                    <label for="amount" class="block text-sm font-medium text-muted mb-2">จำนวนเงิน (บาท)</label>
-                    <input type="number" id="amount" name="amount" step="0.01" required placeholder="เช่น 150.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
-                </div>
-                <!-- Description -->
-                <div>
-                    <label for="description" class="block text-sm font-medium text-muted mb-2">รายการ</label>
-                    <input type="text" id="description" name="description" required placeholder="เช่น ค่าอุปกรณ์ทำบอร์ด" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
-                </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- User Name -->
                 <div>
-                    <label for="user_name" class="block text-sm font-medium text-muted mb-2">ผู้ทำรายการ</label>
-                    <input type="text" id="user_name" name="user_name" required placeholder="ชื่อ-นามสกุล" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                    <label id="userLabel" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">ผู้ทำรายการ</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="user" class="w-4 h-4 text-gray-400"></i>
+                        </div>
+                        <input type="text" id="user_name" required placeholder="ชื่อ-นามสกุล" 
+                            class="pl-9 w-full bg-gray-50 border-0 rounded-xl py-2.5 text-gray-800 focus:ring-2 focus:ring-indigo-500 transition-all">
+                    </div>
                 </div>
+                
                 <!-- Date -->
                 <div>
-                    <label for="transaction_date" class="block text-sm font-medium text-muted mb-2">วันที่ทำรายการ</label>
-                    <input type="date" id="transaction_date" name="transaction_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">วันที่</label>
+                    <input type="date" id="transaction_date" required 
+                        class="w-full bg-gray-50 border-0 rounded-xl py-2.5 px-4 text-gray-800 focus:ring-2 focus:ring-indigo-500 transition-all">
                 </div>
+            </div>
 
-                <!-- Borrow Info Section (Hidden by default) -->
-                <div id="borrowInfoSection" class="hidden space-y-4 pt-2">
-                    <hr class="border-gray-300 dark:border-gray-600">
+            <!-- Description -->
+            <div>
+                <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">รายละเอียด / รายการ</label>
+                <input type="text" id="description" required placeholder="เช่น ค่าถ่ายเอกสาร, ค่าอุปกรณ์" 
+                    class="w-full bg-gray-50 border-0 rounded-xl py-2.5 px-4 text-gray-800 focus:ring-2 focus:ring-indigo-500 transition-all">
+            </div>
+
+            <!-- Dynamic Section: Borrow -->
+            <div id="borrowSection" class="hidden space-y-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-100 dark:border-yellow-800/30">
+                <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 mb-1">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    <span class="text-sm font-bold">เงื่อนไขการยืม</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                        <label for="return_date" class="block text-sm font-medium text-muted mb-2">กำหนดวันคืนเงิน</label>
-                        <input type="date" id="return_date" name="return_date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">กำหนดคืน</label>
+                        <input type="date" id="return_date" class="w-full border border-gray-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-yellow-500">
                     </div>
                     <div>
-                        <label for="interest_rate" class="block text-sm font-medium text-muted mb-2">ดอกเบี้ยต่อวัน (บาท)</label>
-                        <input type="number" id="interest_rate" name="interest_rate" value="2" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">ดอกเบี้ย/วัน (บาท)</label>
+                        <input type="number" id="interest_rate" value="2" step="0.5" class="w-full border border-gray-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-yellow-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">เงื่อนไขนับวัน</label>
+                    <select id="interest_condition" class="w-full border border-gray-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-yellow-500">
+                        <option value="all">ทุกวัน (รวมเสาร์-อาทิตย์)</option>
+                        <option value="weekdays">เฉพาะวันธรรมดา (จ-ศ)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Dynamic Section: Refund -->
+            <div id="refundSection" class="hidden space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-100 dark:border-green-800/30">
+                <div class="flex items-center gap-2 text-green-700 dark:text-green-400 mb-1">
+                    <i data-lucide="calculator" class="w-4 h-4"></i>
+                    <span class="text-sm font-bold">รายละเอียดการคืน</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">ดอกเบี้ยรวม (ถ้ามี)</label>
+                        <input type="number" id="total_interest" placeholder="0.00" class="w-full border border-gray-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                     <div>
-                        <label for="interest_condition" class="block text-sm font-medium text-muted mb-2">เงื่อนไขดอกเบี้ย</label>
-                        <select id="interest_condition" name="interest_condition" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
-                            <option value="all" selected>รวมเสาร์-อาทิตย์</option>
-                            <option value="weekdays">ไม่รวมเสาร์-อาทิตย์</option>
-                            <option value="saturday_only">รวมเฉพาะวันเสาร์</option>
-                            <option value="sunday_only">รวมเฉพาะวันอาทิตย์</option>
-                        </select>
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">คงเหลือที่ต้องคืน</label>
+                        <input type="number" id="remaining_amount" placeholder="0.00" class="w-full border border-gray-200 rounded-lg py-2 px-3 text-sm focus:ring-2 focus:ring-green-500">
                     </div>
                 </div>
+            </div>
 
-                <!-- Refund Info Section (Hidden by default) -->
-                <div id="refundInfoSection" class="hidden space-y-4 pt-2">
-                    <hr class="border-gray-300 dark:border-gray-600">
-                    <div>
-                        <label for="remaining_amount" class="block text-sm font-medium text-muted mb-2">เหลือจำนวนที่คืนอยู่ (บาท)</label>
-                        <input type="number" id="remaining_amount" name="remaining_amount" step="0.01" placeholder="เช่น 500.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
-                    </div>
-                    <div>
-                        <label for="total_interest" class="block text-sm font-medium text-muted mb-2">รวมดอกเบี้ย (ถ้ามี)</label>
-                        <input type="number" id="total_interest" name="total_interest" step="0.01" placeholder="เช่น 20.00" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none transition duration-200">
-                    </div>
-                </div>
+            <!-- Options -->
+            <div class="flex gap-4 pt-2">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    <input type="checkbox" id="showQRCode" checked class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                    <span class="text-sm text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 transition-colors">แสดง QR Code</span>
+                </label>
+            </div>
 
-                <!-- Slip Options -->
-                <div class="pt-2 space-y-3">
-                    <hr class="border-gray-300 dark:border-gray-600">
-                    <label for="showRefCode" class="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" id="showRefCode" name="showRefCode" class="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked>
-                        <span class="text-muted">แสดงรหัสอ้างอิง</span>
-                    </label>
-                    <label for="showQRCode" class="flex items-center space-x-3 cursor-pointer">
-                        <input type="checkbox" id="showQRCode" name="showQRCode" class="h-5 w-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked>
-                        <span class="text-muted">แสดง QR Code</span>
-                    </label>
-                </div>
+            <!-- Button -->
+            <button type="submit" id="generateBtn" class="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transform hover:-translate-y-0.5 transition-all duration-200 flex justify-center items-center gap-2">
+                <i data-lucide="wand-2" class="w-5 h-5"></i>
+                <span>สร้างสลิป (Generate)</span>
+            </button>
 
-
-                <!-- Submit Button -->
-                <div class="pt-4">
-                    <button type="submit" id="generateButton" class="w-full flex items-center justify-center py-3 px-4 rounded-lg shadow-md text-md font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated">
-                        <span id="generateButtonText">สร้างสลิป</span>
-                        <div id="generateSpinner" class="spinner ml-3 hidden"></div>
-                    </button>
-                </div>
-            </form>
-        </div>
+        </form>
         
-        <!-- Footer -->
-        <footer class="text-center mt-8 mb-4 text-gray-500 dark:text-gray-400 text-sm">
-            <p class="mb-2">เว็บไซต์นี้ไม่ได้มีเจตนาใช้เพื่อการทำธุรกรรมออนไลน์มีไว้เพียงบันทึกหลักฐานการใช้เงินของห้องเรียนเท่านั้น</p>
-            <p>สร้างโดย Gemini</p>
-        </footer>
+        <div class="mt-6 text-center text-xs text-gray-400 leading-relaxed">
+             เว็บไซต์นี้ไม่ได้มีเจตนาใช้เพื่อการทำธุรกรรมออนไลน์<br>มีไว้เพียงบันทึกหลักฐานการใช้เงินของห้องเรียนเท่านั้น<br>
+             <span class="opacity-75">สร้างโดย Gemini</span>
+        </div>
     </div>
 
-    <!-- Slip Preview Modal -->
-    <div id="previewModal" class="modal hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-        <div class="modal-content modal-content-bg w-full max-w-sm bg-white rounded-lg shadow-xl flex flex-col" style="max-height: 90vh;">
-            <!-- Modal Header -->
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h3 class="text-lg font-medium text-center modal-header-text">ตัวอย่างสลิป</h3>
-            </div>
-            
-            <!-- Scrollable Content Area -->
-            <div class="p-6 overflow-y-auto">
-                <div id="slipOutput" class="flex justify-center items-start">
-                    <!-- The generated slip image will be placed here -->
+    <!-- Hidden Template (High Res) -->
+    <div style="position: fixed; left: -9999px; top: 0;">
+        <div id="slipTemplate">
+            <!-- Header Strip (Adjusted: Removed Text) -->
+            <div id="slipHeaderBg" class="h-24 flex items-center justify-center relative overflow-hidden">
+                <div class="absolute inset-0 bg-pattern opacity-10"></div>
+                <div class="z-10 flex flex-col items-center text-white pt-2">
+                    <div class="bg-white/20 p-2 rounded-full mb-1 backdrop-blur-sm">
+                        <svg id="slipIcon" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <!-- TEXT REMOVED HERE AS REQUESTED -->
                 </div>
             </div>
 
-            <!-- Modal Footer -->
-            <div class="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row-reverse gap-3 flex-shrink-0">
-                <button id="downloadButton" class="w-full inline-flex justify-center rounded-md px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-base font-medium text-white hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 btn-animated sm:text-sm">
-                    ดาวน์โหลด
-                </button>
-                <button id="closeModalButton" class="w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white close-btn-bg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 btn-animated sm:mt-0 sm:text-sm">
-                    ปิด
-                </button>
+            <div class="p-6 slip-content">
+                <!-- Watermark -->
+                <div class="slip-watermark"></div>
+
+                <!-- Main Amount -->
+                <div class="text-center mb-6">
+                    <p class="text-gray-500 text-sm mb-1">จำนวนเงิน</p>
+                    <p id="slipAmount" class="text-4xl font-bold text-gray-800 tracking-tight">150.00</p>
+                    <p class="text-xs text-gray-400 mt-1">บาท (THB)</p>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-b-2 border-dashed border-gray-200 mb-6"></div>
+
+                <!-- Details List -->
+                <div class="space-y-4 text-sm">
+                    <div class="flex justify-between items-start">
+                        <span class="text-gray-500 w-24">รายการ</span>
+                        <span id="slipDesc" class="font-semibold text-gray-800 text-right flex-1 break-words">ค่าอุปกรณ์</span>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <span id="slipUserLabel" class="text-gray-500 w-24">ผู้ทำรายการ</span>
+                        <span id="slipUser" class="font-semibold text-gray-800 text-right flex-1">สมชาย ใจดี</span>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <span class="text-gray-500 w-24">วันที่ทำรายการ</span>
+                        <span id="slipBodyDate" class="font-semibold text-gray-800 text-right flex-1">12 เม.ย. 68 14:30 น.</span>
+                    </div>
+                    <div class="flex justify-between items-start">
+                        <span class="text-gray-500 w-24">รหัสอ้างอิง</span>
+                        <span id="slipRef" class="font-mono text-gray-600 text-xs text-right pt-0.5">REF12345678</span>
+                    </div>
+                    
+                    <!-- Special Rows (Hidden by default) -->
+                    <div id="slipBorrowRow" class="hidden pt-2 border-t border-gray-100">
+                        <div class="flex justify-between text-red-600 text-xs font-medium bg-red-50 p-2 rounded">
+                            <span>กำหนดคืน:</span>
+                            <span id="slipReturnDate">12/04/68</span>
+                        </div>
+                        <p id="slipInterest" class="text-[10px] text-gray-400 text-right mt-1">ดอกเบี้ย 2 บ./วัน</p>
+                    </div>
+                    
+                    <div id="slipRefundRow" class="hidden pt-2 border-t border-gray-100">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-gray-500">ดอกเบี้ยรวม</span>
+                            <span id="slipTotalInterest" class="font-semibold">20.00</span>
+                        </div>
+                        <div class="flex justify-between text-green-600 font-medium">
+                            <span>ยอดคงเหลือ</span>
+                            <span id="slipRemaining">500.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QR Section -->
+                <div id="slipQRRow" class="mt-8 text-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+                    <img id="slipQR" src="" class="w-32 h-32 mx-auto mix-blend-multiply" alt="QR Code">
+                    <p class="text-[10px] text-gray-400 mt-2">สแกนเพื่อตรวจสอบรายการ</p>
+                </div>
+                
+                <!-- Footer -->
+                <div class="mt-6 text-center">
+                    <p class="text-[10px] text-gray-300">Classroom Fund Management System</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Hidden Slip Template (This is what gets converted to an image) -->
-    <div id="slipContainer" class="fixed -left-full top-0">
-        <div id="slipTemplate" class="p-6 bg-white" style="width: 350px;">
-            <div class="text-center pb-4">
-                 <svg id="templateIcon" class="mx-auto h-12 w-auto text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <h2 id="templateTitle" class="text-xl font-bold mt-2"></h2>
-                <p id="templateDate" class="text-sm text-gray-500"></p>
+    <!-- Preview Modal -->
+    <div id="modal" class="fixed inset-0 z-50 hidden flex items-center justify-center px-4">
+        <!-- Backdrop -->
+        <div id="modalBackdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity opacity-0"></div>
+        
+        <!-- Content -->
+        <div id="modalContent" class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform scale-95 opacity-0 transition-all duration-300">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 dark:text-white">ตัวอย่างสลิป</h3>
+                <button id="closeModal" class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
+                </button>
             </div>
             
-            <div class="my-4 text-center">
-                <p class="text-4xl font-bold" id="templateAmount"></p>
-            </div>
-
-            <div class="border-t border-b border-dashed py-4 space-y-3 text-sm">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">รายการ:</span>
-                    <span class="font-semibold text-right" id="templateDescription"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span id="templateUserLabel" class="text-gray-600">ผู้ทำรายการ:</span>
-                    <span class="font-semibold text-right" id="templateUserName"></span>
-                </div>
-                <div id="templateRefRow" class="flex justify-between">
-                    <span class="text-gray-600">รหัสอ้างอิง:</span>
-                    <span class="font-semibold" id="templateRef"></span>
+            <!-- Image Area -->
+            <div class="p-6 bg-gray-200 dark:bg-slate-900 flex justify-center overflow-auto max-h-[60vh]">
+                <div id="previewArea" class="shadow-lg rounded-lg overflow-hidden">
+                    <!-- Canvas appended here -->
                 </div>
             </div>
             
-            <!-- Borrow Info on Slip -->
-            <div id="templateBorrowSection" class="hidden border-b border-dashed pb-4 pt-3 space-y-2 text-sm">
-                 <div class="flex justify-between">
-                    <span class="text-gray-600">กำหนดคืนวันที่:</span>
-                    <span class="font-semibold text-right" id="templateReturnDate"></span>
-                </div>
-                <div class="text-center text-xs text-red-600 font-medium pt-1">
-                    <p id="templateInterestInfo"></p>
-                </div>
-            </div>
-            
-            <!-- Refund Info on Slip -->
-            <div id="templateRefundSection" class="hidden border-b border-dashed pb-4 pt-3 space-y-2 text-sm">
-                 <div class="flex justify-between">
-                    <span class="text-gray-600">รวมดอกเบี้ย:</span>
-                    <span class="font-semibold text-right" id="templateTotalInterest"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">ยอดคงเหลือ:</span>
-                    <span class="font-semibold text-right" id="templateRemainingAmount"></span>
-                </div>
-            </div>
-
-
-            <div id="templateQRSection" class="mt-6 text-center">
-                <img id="templateQR" src="https://placehold.co/150x150/e2e8f0/e2e8f0?text=QR" alt="QR Code" class="mx-auto rounded-md">
-                <p class="text-xs text-gray-500 mt-2">สลิปนี้ใช้เป็นหลักฐานการทำรายการ</p>
+            <!-- Actions -->
+            <div class="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+                <button id="downloadBtn" class="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-lg shadow-green-500/30 transition-all flex justify-center items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> บันทึกรูปภาพ
+                </button>
+                <button id="shareBtn" class="py-2.5 px-4 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-all">
+                    <i data-lucide="share-2" class="w-4 h-4"></i>
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM ELEMENTS ---
-            const slipForm = document.getElementById('slipForm');
-            const generateButton = document.getElementById('generateButton');
-            const generateButtonText = document.getElementById('generateButtonText');
-            const generateSpinner = document.getElementById('generateSpinner');
-            const previewModal = document.getElementById('previewModal');
-            const closeModalButton = document.getElementById('closeModalButton');
-            const downloadButton = document.getElementById('downloadButton');
-            const slipOutput = document.getElementById('slipOutput');
-            const slipTemplate = document.getElementById('slipTemplate');
-            const darkModeToggle = document.getElementById('darkModeToggle');
-            const sunIcon = document.getElementById('sunIcon');
-            const moonIcon = document.getElementById('moonIcon');
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // State & DOM
+        const form = document.getElementById('slipForm');
+        const typeBtns = document.querySelectorAll('.type-btn');
+        const sections = {
+            borrow: document.getElementById('borrowSection'),
+            refund: document.getElementById('refundSection')
+        };
+        const template = {
+            el: document.getElementById('slipTemplate'),
+            header: document.getElementById('slipHeaderBg'),
+            amount: document.getElementById('slipAmount'),
+            desc: document.getElementById('slipDesc'),
+            user: document.getElementById('slipUser'),
+            userLabel: document.getElementById('slipUserLabel'),
+            ref: document.getElementById('slipRef'),
+            bodyDate: document.getElementById('slipBodyDate'), // New Location for Date
+            qr: document.getElementById('slipQR'),
+            qrRow: document.getElementById('slipQRRow'),
+            borrowRow: document.getElementById('slipBorrowRow'),
+            refundRow: document.getElementById('slipRefundRow'),
+            icon: document.getElementById('slipIcon')
+        };
+
+        let currentType = 'income'; // Default
+
+        // Colors configurations
+        const typeConfig = {
+            income: { 
+                label: 'รายรับ', 
+                colorClass: 'bg-green-600', 
+                gradient: 'bg-gradient-to-r from-emerald-500 to-green-600',
+                btnClass: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800'
+            },
+            use: { 
+                label: 'ใช้เงินห้อง', 
+                colorClass: 'bg-red-600', 
+                gradient: 'bg-gradient-to-r from-rose-500 to-red-600',
+                btnClass: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-800'
+            },
+            borrow: { 
+                label: 'ยืมเงินห้อง', 
+                colorClass: 'bg-orange-600', 
+                gradient: 'bg-gradient-to-r from-orange-500 to-amber-600',
+                btnClass: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800'
+            },
+            refund: { 
+                label: 'คืนเงินห้อง', 
+                colorClass: 'bg-blue-600', 
+                gradient: 'bg-gradient-to-r from-blue-500 to-indigo-600',
+                btnClass: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800'
+            }
+        };
+
+        // --- Logic: Switch Type ---
+        function setType(type) {
+            currentType = type;
             
-            // Transaction type elements
-            const incomeButton = document.getElementById('incomeButton');
-            const useFundsButton = document.getElementById('useFundsButton');
-            const borrowFundsButton = document.getElementById('borrowFundsButton');
-            const refundButton = document.getElementById('refundButton');
-            const borrowInfoSection = document.getElementById('borrowInfoSection');
-            const refundInfoSection = document.getElementById('refundInfoSection');
-            const returnDateInput = document.getElementById('return_date');
-            const userNameLabel = document.querySelector('label[for="user_name"]');
-            
-            const interestRateInput = document.getElementById('interest_rate');
-
-            // Template elements
-            const templateTitle = document.getElementById('templateTitle');
-            const templateUserLabel = document.getElementById('templateUserLabel');
-            const templateBorrowSection = document.getElementById('templateBorrowSection');
-            const templateRefundSection = document.getElementById('templateRefundSection');
-            const templateIcon = document.getElementById('templateIcon');
-            const templateAmount = document.getElementById('templateAmount');
-
-            let generatedCanvas = null;
-            let transactionType = 'use'; // 'use', 'borrow', 'income', 'refund'
-
-            // --- STYLING CLASSES ---
-            const activeBtnClasses = ['toggle-btn-active', 'bg-white', 'dark:bg-indigo-600', 'text-indigo-700', 'dark:text-white', 'shadow-sm'];
-            const inactiveBtnClasses = ['toggle-btn-inactive', 'text-gray-500', 'dark:text-gray-400'];
-
-            // --- DARK MODE LOGIC ---
-            const applyDarkMode = (isDark) => {
-                if (isDark) {
-                    document.body.classList.add('dark');
-                    sunIcon.classList.add('hidden');
-                    moonIcon.classList.remove('hidden');
+            // UI Buttons Update
+            typeBtns.forEach(btn => {
+                const t = btn.dataset.type;
+                const config = typeConfig[t];
+                
+                // Reset styling
+                btn.className = 'type-btn py-2 px-3 rounded-lg text-sm font-medium transition-all text-center border-2 border-transparent hover:bg-white/50 dark:hover:bg-slate-700';
+                
+                if (t === type) {
+                    btn.classList.add(...config.btnClass.split(' '));
+                    btn.classList.remove('hover:bg-white/50', 'dark:hover:bg-slate-700');
+                    btn.classList.add('shadow-sm', 'scale-105');
                 } else {
-                    document.body.classList.remove('dark');
-                    sunIcon.classList.remove('hidden');
-                    moonIcon.classList.add('hidden');
-                }
-                updateToggleButtonsUI();
-            };
-
-            darkModeToggle.addEventListener('click', () => {
-                const isDarkMode = document.body.classList.toggle('dark');
-                localStorage.setItem('darkMode', isDarkMode);
-                applyDarkMode(isDarkMode);
-            });
-
-            // --- TRANSACTION TYPE TOGGLE LOGIC ---
-            const updateToggleButtonsUI = () => {
-                const buttons = {
-                    income: incomeButton,
-                    use: useFundsButton,
-                    borrow: borrowFundsButton,
-                    refund: refundButton
-                };
-
-                for (const key in buttons) {
-                    buttons[key].classList.remove(...activeBtnClasses);
-                    buttons[key].classList.add(...inactiveBtnClasses);
-                }
-
-                if (buttons[transactionType]) {
-                    buttons[transactionType].classList.remove(...inactiveBtnClasses);
-                    buttons[transactionType].classList.add(...activeBtnClasses);
-                }
-            };
-            
-            const setTransactionType = (type) => {
-                transactionType = type;
-                borrowInfoSection.classList.add('hidden');
-                refundInfoSection.classList.add('hidden'); // Hide refund section by default
-                returnDateInput.required = false;
-                interestRateInput.required = false;
-                
-                if (type === 'income') {
-                    userNameLabel.textContent = 'ผู้รับเงิน';
-                } else if (type === 'use') {
-                    userNameLabel.textContent = 'ผู้เบิกเงิน';
-                } else if (type === 'borrow') {
-                    borrowInfoSection.classList.remove('hidden');
-                    returnDateInput.required = true;
-                    interestRateInput.required = true;
-                    userNameLabel.textContent = 'ผู้ยืมเงิน';
-                } else if (type === 'refund') {
-                    refundInfoSection.classList.remove('hidden'); // Show for refund type
-                    userNameLabel.textContent = 'ผู้คืนเงิน';
-                }
-                updateToggleButtonsUI();
-            };
-            
-            incomeButton.addEventListener('click', () => setTransactionType('income'));
-            useFundsButton.addEventListener('click', () => setTransactionType('use'));
-            borrowFundsButton.addEventListener('click', () => setTransactionType('borrow'));
-            refundButton.addEventListener('click', () => setTransactionType('refund'));
-
-            // --- FORM LOGIC ---
-            slipForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                setLoadingState(true);
-
-                const formData = new FormData(slipForm);
-                const data = Object.fromEntries(formData.entries());
-                
-                populateSlipTemplate(data);
-                
-                const qrImg = document.getElementById('templateQR');
-                if (qrImg.complete) {
-                    generateSlipImage();
-                } else {
-                    qrImg.onload = () => { generateSlipImage(); };
-                    qrImg.onerror = () => {
-                        console.error("QR Code image failed to load.");
-                        slipOutput.innerHTML = `<p class="text-red-500">ไม่สามารถโหลด QR Code ได้</p>`;
-                        setLoadingState(false);
-                    };
+                    btn.classList.add('text-gray-500', 'dark:text-gray-400');
                 }
             });
 
-            const populateSlipTemplate = (data) => {
-                // Get checkbox states
-                const showRef = document.getElementById('showRefCode').checked;
-                const showQR = document.getElementById('showQRCode').checked;
+            // Form Sections Visibility
+            sections.borrow.classList.add('hidden');
+            sections.refund.classList.add('hidden');
+            
+            // Required Toggling
+            document.getElementById('return_date').required = false;
+            
+            if (type === 'borrow') {
+                sections.borrow.classList.remove('hidden');
+                document.getElementById('return_date').required = true;
+            } else if (type === 'refund') {
+                sections.refund.classList.remove('hidden');
+            }
 
-                // Get elements to toggle
-                const refRow = document.getElementById('templateRefRow');
-                const qrSection = document.getElementById('templateQRSection');
+            // Labels Update
+            const userLabelMap = {
+                income: 'ผู้รับเงิน / ผู้จ่ายเงินเข้า',
+                use: 'ผู้เบิกเงิน',
+                borrow: 'ผู้ยืมเงิน',
+                refund: 'ผู้คืนเงิน'
+            };
+            document.getElementById('userLabel').textContent = userLabelMap[type];
+        }
 
-                // Toggle visibility based on checkboxes, preserving space
-                refRow.classList.toggle('invisible-space', !showRef);
-                qrSection.classList.toggle('invisible-space', !showQR);
+        // Event Listeners for Types
+        typeBtns.forEach(btn => {
+            btn.addEventListener('click', () => setType(btn.dataset.type));
+        });
 
-                // Format transaction date (without time)
-                const transactionDate = new Date(data.transaction_date);
-                const userTimezoneOffset = transactionDate.getTimezoneOffset() * 60000;
-                const adjustedDate = new Date(transactionDate.getTime() + userTimezoneOffset);
-                const formattedDate = adjustedDate.toLocaleString('th-TH', {
-                    year: 'numeric', month: 'long', day: 'numeric'
+        // --- Logic: Dark Mode ---
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        if (isDark) document.body.classList.add('dark');
+
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+        });
+
+        // --- Logic: Auto-save Name ---
+        const nameInput = document.getElementById('user_name');
+        if (localStorage.getItem('lastUserName')) {
+            nameInput.value = localStorage.getItem('lastUserName');
+        }
+        nameInput.addEventListener('change', (e) => {
+            localStorage.setItem('lastUserName', e.target.value);
+        });
+
+        // --- Logic: Generate Slip ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Loading State
+            const btn = document.getElementById('generateBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังสร้าง...`;
+            btn.disabled = true;
+
+            // Prepare Data
+            const amount = parseFloat(document.getElementById('amount').value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const dateVal = document.getElementById('transaction_date').value;
+            const dateObj = new Date(dateVal);
+            const displayDate = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+            const nowTime = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+            const config = typeConfig[currentType];
+
+            // 1. Populate Template Header
+            template.header.className = `h-24 flex items-center justify-center relative overflow-hidden ${config.gradient}`;
+            
+            // Removed header text assignment here
+
+            // 2. Populate Main Info
+            template.amount.textContent = amount;
+            template.amount.className = `text-4xl font-bold tracking-tight ${['income', 'refund'].includes(currentType) ? 'text-green-600' : 'text-red-600'}`;
+            
+            template.desc.textContent = document.getElementById('description').value;
+            template.user.textContent = document.getElementById('user_name').value;
+            template.userLabel.textContent = document.getElementById('userLabel').textContent; // Sync label
+            
+            // Populate Date in Body
+            template.bodyDate.textContent = `${displayDate} ${nowTime}`;
+
+            const refId = 'REF' + Date.now().toString().slice(-8);
+            template.ref.textContent = refId;
+
+            // 3. Dynamic Rows
+            template.borrowRow.classList.add('hidden');
+            template.refundRow.classList.add('hidden');
+
+            if (currentType === 'borrow') {
+                template.borrowRow.classList.remove('hidden');
+                const rDate = new Date(document.getElementById('return_date').value);
+                document.getElementById('slipReturnDate').textContent = rDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+                const rate = document.getElementById('interest_rate').value;
+                const cond = document.getElementById('interest_condition').value === 'all' ? '(ทุกวัน)' : '(จ-ศ)';
+                document.getElementById('slipInterest').textContent = `ดอกเบี้ย ${rate} บ./วัน ${cond}`;
+            }
+
+            if (currentType === 'refund') {
+                template.refundRow.classList.remove('hidden');
+                const interest = parseFloat(document.getElementById('total_interest').value || 0).toFixed(2);
+                const remaining = parseFloat(document.getElementById('remaining_amount').value || 0).toFixed(2);
+                document.getElementById('slipTotalInterest').textContent = interest;
+                document.getElementById('slipRemaining').textContent = remaining;
+            }
+
+            // 4. QR Code
+            const showQR = document.getElementById('showQRCode').checked;
+            if (showQR) {
+                template.qrRow.classList.remove('hidden');
+                const qrData = `Ref:${refId}|Type:${currentType}|Amt:${amount}|User:${template.user.textContent}`;
+                template.qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}&margin=0`;
+                // Wait for QR to load
+                await new Promise(resolve => {
+                    if (template.qr.complete) resolve();
+                    template.qr.onload = resolve;
+                    template.qr.onerror = resolve; // Continue even if error
                 });
-
-                document.getElementById('templateDate').textContent = formattedDate;
-                document.getElementById('templateDescription').textContent = data.description;
-                document.getElementById('templateUserName').textContent = data.user_name;
-                
-                const refNumber = 'REF' + Date.now().toString().slice(-8);
-                document.getElementById('templateRef').textContent = refNumber;
-                
-                let qrData = `Type: ${transactionType}, Payee: ${data.user_name}, Amount: ${data.amount}, Desc: ${data.description}, Ref: ${refNumber}`;
-                
-                // --- Reset template sections and styles ---
-                templateBorrowSection.classList.add('hidden');
-                templateRefundSection.classList.add('hidden');
-                const formattedAmount = ' ' + parseFloat(data.amount).toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
-
-                // --- Set styles and text based on transaction type ---
-                switch(transactionType) {
-                    case 'income':
-                    case 'refund':
-                        templateTitle.textContent = transactionType === 'income' ? 'บันทึกรายรับเข้าห้อง' : 'บันทึกการคืนเงินห้อง';
-                        templateUserLabel.textContent = transactionType === 'income' ? 'ผู้รับเงิน:' : 'ผู้คืนเงิน:';
-                        templateAmount.textContent = '+' + formattedAmount;
-                        templateAmount.classList.remove('text-red-600');
-                        templateAmount.classList.add('text-green-600');
-                        break;
-                    case 'borrow':
-                    case 'use':
-                        templateTitle.textContent = transactionType === 'use' ? 'บันทึกการใช้เงินห้อง' : 'บันทึกการยืมเงินห้อง';
-                        templateUserLabel.textContent = transactionType === 'use' ? 'ผู้เบิกเงิน:' : 'ผู้ยืมเงิน:';
-                        templateAmount.textContent = '-' + formattedAmount;
-                        templateAmount.classList.remove('text-green-600');
-                        templateAmount.classList.add('text-red-600');
-                        break;
-                }
-                
-                // --- Populate type-specific sections ---
-                if (transactionType === 'borrow') {
-                    const returnDate = new Date(data.return_date);
-                    const adjustedReturnDate = new Date(returnDate.getTime() + userTimezoneOffset);
-                    document.getElementById('templateReturnDate').textContent = adjustedReturnDate.toLocaleString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-                    
-                    const interestRate = data.interest_rate || 0;
-                    let interestText = `คิดดอกเบี้ยวันละ ${parseFloat(interestRate).toLocaleString('th-TH', {minimumFractionDigits: 2})} บาทจากวันที่กำหนด`;
-                    const conditionMap = {'all': ' (รวม ส-อา)', 'weekdays': ' (ไม่รวม ส-อา)', 'saturday_only': ' (รวมเฉพาะวันเสาร์)', 'sunday_only': ' (รวมเฉพาะวันอาทิตย์)'};
-                    interestText += conditionMap[data.interest_condition] || '';
-                    document.getElementById('templateInterestInfo').textContent = interestText;
-                    
-                    qrData += `, InterestRate: ${interestRate}, Condition: ${data.interest_condition}`;
-                    templateBorrowSection.classList.remove('hidden');
-                }
-
-                if (transactionType === 'refund') {
-                    const totalInterest = parseFloat(data.total_interest || 0);
-                    const remainingAmount = parseFloat(data.remaining_amount || 0);
-
-                    const totalInterestEl = document.getElementById('templateTotalInterest');
-                    const remainingAmountEl = document.getElementById('templateRemainingAmount');
-                    
-                    if (totalInterest > 0) {
-                        totalInterestEl.parentElement.classList.remove('hidden');
-                        totalInterestEl.textContent = totalInterest.toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
-                    } else {
-                        totalInterestEl.parentElement.classList.add('hidden');
-                    }
-                    
-                    remainingAmountEl.textContent = remainingAmount.toLocaleString('th-TH', { style: 'currency', currency: 'THB', minimumFractionDigits: 2 });
-
-                    templateRefundSection.classList.remove('hidden');
-                    qrData += `, TotalInterest: ${totalInterest}, Remaining: ${remainingAmount}`;
-                }
-
-                // --- Generate QR Code ---
-                if (showQR) {
-                    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}&qzone=1`;
-                    document.getElementById('templateQR').src = qrCodeUrl;
-                }
-            };
-
-            const generateSlipImage = () => {
-                html2canvas(slipTemplate, { 
-                    useCORS: true,
-                    scale: 2.0,
-                    backgroundColor: '#ffffff',
-                }).then(canvas => {
-                    generatedCanvas = canvas;
-                    slipOutput.innerHTML = ''; 
-                    canvas.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md');
-                    slipOutput.appendChild(canvas);
-                    
-                    showModal();
-                    setLoadingState(false);
-                }).catch(err => {
-                    console.error("Error generating canvas:", err);
-                    setLoadingState(false);
-                });
-            };
-
-            // --- MODAL CONTROLS ---
-            const showModal = () => {
-                previewModal.classList.remove('hidden');
-                previewModal.classList.add('open');
-            };
-
-            const hideModal = () => {
-                previewModal.classList.add('hidden');
-                previewModal.classList.remove('open');
-            };
-
-            closeModalButton.addEventListener('click', hideModal);
-            previewModal.addEventListener('click', (e) => {
-                if (e.target === previewModal) {
-                    hideModal();
-                }
-            });
-
-            downloadButton.addEventListener('click', () => {
-                if (!generatedCanvas) return;
-                const fileName = `slip-${transactionType}-${Date.now()}`;
-                const link = document.createElement('a');
-                link.download = `${fileName}.png`;
-                link.href = generatedCanvas.toDataURL('image/png');
-                link.click();
-            });
-
-            // --- UTILITY FUNCTIONS ---
-            const setLoadingState = (isLoading) => {
-                generateButton.disabled = isLoading;
-                if (isLoading) {
-                    generateButtonText.textContent = 'กำลังสร้าง...';
-                    generateSpinner.classList.remove('hidden');
-                } else {
-                    generateButtonText.textContent = 'สร้างสลิป';
-                    generateSpinner.classList.add('hidden');
-                }
-            };
-
-            const setInitialDate = () => {
-                const now = new Date();
-                const today = now.toISOString().slice(0, 10);
-                document.getElementById('transaction_date').value = today;
-                now.setDate(now.getDate() + 7);
-                document.getElementById('return_date').value = now.toISOString().slice(0, 10);
-            };
-
-            // --- INITIALIZATION ---
-            setInitialDate();
-            setTransactionType('use'); 
-            if (localStorage.getItem('darkMode') === 'true') {
-                applyDarkMode(true);
             } else {
-                applyDarkMode(false);
+                template.qrRow.classList.add('hidden');
+            }
+
+            // 5. Generate Image
+            try {
+                // Short delay to ensure DOM render
+                await new Promise(r => setTimeout(r, 100));
+                
+                const canvas = await html2canvas(template.el, {
+                    scale: 2, // High res
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
+
+                // Show Modal
+                const previewArea = document.getElementById('previewArea');
+                previewArea.innerHTML = '';
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
+                previewArea.appendChild(canvas);
+
+                openModal(canvas);
+
+            } catch (err) {
+                console.error(err);
+                alert('เกิดข้อผิดพลาดในการสร้างภาพ');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         });
+
+        // --- Modal Logic ---
+        const modal = document.getElementById('modal');
+        const modalBackdrop = document.getElementById('modalBackdrop');
+        const modalContent = document.getElementById('modalContent');
+        let currentCanvas = null;
+
+        function openModal(canvas) {
+            currentCanvas = canvas;
+            modal.classList.remove('hidden');
+            // Animation frame
+            requestAnimationFrame(() => {
+                modalBackdrop.classList.remove('opacity-0');
+                modalContent.classList.remove('opacity-0', 'scale-95');
+                modalContent.classList.add('scale-100');
+            });
+        }
+
+        function closeModal() {
+            modalBackdrop.classList.add('opacity-0');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop) closeModal();
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (!currentCanvas) return;
+            const link = document.createElement('a');
+            link.download = `Slip-${currentType}-${Date.now()}.png`;
+            link.href = currentCanvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Initialize Defaults
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('transaction_date').value = today;
+        setType('income'); // Init trigger
+
     </script>
 </body>
 </html>
-
-
